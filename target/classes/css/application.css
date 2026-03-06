@@ -1,0 +1,513 @@
+/* Styles principaux pour JProgressQuest */
+/* Utilise les dernières fonctionnalités CSS supportées par JavaFX */
+
+/* === Styles globaux === */
+.root {
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+    -fx-font-size: 12px;
+    -fx-background-color: #ecf0f1;
+}
+
+/* === Barres de progression personnalisées === */
+.progress-bar {
+    -fx-pref-height: 20px;
+    -fx-background-radius: 10px;
+}
+
+.progress-bar > .track {
+    -fx-background-color: #bdc3c7;
+    -fx-background-radius: 10px;
+    -fx-background-insets: 0;
+}
+
+.progress-bar > .bar {
+    -fx-background-radius: 10px;
+    -fx-background-insets: 1px;
+    -fx-padding: 0.25em;
+}
+
+/* Barres de progression spécifiques */
+.experience-bar > .bar {
+    -fx-background-color: linear-gradient(to right, #3498db, #2980b9);
+}
+
+.encumbrance-bar > .bar {
+    -fx-background-color: linear-gradient(to right, #e67e22, #d35400);
+}
+
+.plot-bar > .bar {
+    -fx-background-color: linear-gradient(to right, #9b59b6, #8e44ad);
+}
+
+.quest-bar > .bar {
+    -fx-background-color: linear-gradient(to right, #1abc9c, #16a085);
+}
+
+.task-bar > .bar {
+    -fx-background-color: linear-gradient(to right, #27ae60, #229954);
+}
+
+/* Effet de pulsation pour la barre de tâche active */
+.task-bar.active > .bar {
+    -fx-effect: dropshadow(gaussian, rgba(39, 174, 96, 0.6), 10, 0, 0, 0);
+}
+
+/* === Boutons === */
+.button {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 5px;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1);
+}
+
+.button:hover {
+    -fx-background-color: #2980b9;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 3, 0, 0, 2);
+}
+
+.button:pressed {
+    -fx-background-color: #21618c;
+    -fx-translate-y: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 1, 0, 0, 1);
+}
+
+.button:disabled {
+    -fx-background-color: #bdc3c7;
+    -fx-text-fill: #7f8c8d;
+    -fx-effect: none;
+    -fx-cursor: default;
+}
+
+/* Boutons spéciaux */
+.button.play-button {
+    -fx-background-color: #27ae60;
+    -fx-font-size: 14px;
+    -fx-pref-width: 80px;
+}
+
+.button.play-button:hover {
+    -fx-background-color: #229954;
+}
+
+.button.pause-button {
+    -fx-background-color: #f39c12;
+}
+
+.button.pause-button:hover {
+    -fx-background-color: #e67e22;
+}
+
+.button.danger {
+    -fx-background-color: #e74c3c;
+}
+
+.button.danger:hover {
+    -fx-background-color: #c0392b;
+}
+
+/* === Tables === */
+.table-view {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 1px;
+    -fx-table-cell-border-color: #ecf0f1;
+}
+
+.table-view:focused {
+    -fx-border-color: #3498db;
+    -fx-border-width: 2px;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #34495e;
+}
+
+.table-view .column-header {
+    -fx-background-color: #34495e;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-color: #2c3e50;
+    -fx-border-width: 0 1px 0 0;
+}
+
+.table-view .table-cell {
+    -fx-padding: 5px;
+    -fx-border-color: #ecf0f1;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: #ecf0f1;
+}
+
+/* Lignes spéciales pour l'équipement */
+.table-row-cell.equipped-row {
+    -fx-background-color: rgba(46, 204, 113, 0.1);
+    -fx-border-color: #2ecc71;
+    -fx-border-width: 0 0 0 3px;
+}
+
+.table-row-cell.equipped-row:selected {
+    -fx-background-color: #2ecc71;
+}
+
+/* === Listes === */
+.list-view {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 1px;
+}
+
+.list-view:focused {
+    -fx-border-color: #3498db;
+    -fx-border-width: 2px;
+}
+
+.list-cell {
+    -fx-padding: 5px 10px;
+    -fx-border-color: #ecf0f1;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.list-cell:selected {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+}
+
+.list-cell:hover {
+    -fx-background-color: #ecf0f1;
+}
+
+/* Listes spécialisées */
+.quest-list .list-cell {
+    -fx-font-style: italic;
+}
+
+.plot-list .list-cell {
+    -fx-font-weight: bold;
+}
+
+/* === Labels et texte === */
+.label.title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+.label.subtitle {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #34495e;
+}
+
+.label.stat-label {
+    -fx-font-family: "Courier New", monospace;
+    -fx-font-weight: bold;
+}
+
+.label.status-good {
+    -fx-text-fill: #27ae60;
+    -fx-font-weight: bold;
+}
+
+.label.status-warning {
+    -fx-text-fill: #f39c12;
+    -fx-font-weight: bold;
+}
+
+.label.status-danger {
+    -fx-text-fill: #e74c3c;
+    -fx-font-weight: bold;
+}
+
+/* === Panneaux et conteneurs === */
+.content-panel {
+    -fx-background-color: white;
+    -fx-padding: 15px;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 1px;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);
+}
+
+.character-sheet {
+    -fx-background-color: #f8f9fa;
+    -fx-padding: 10px;
+}
+
+.equipment-panel {
+    -fx-background-color: #fff3cd;
+    -fx-border-color: #ffeaa7;
+}
+
+.inventory-panel {
+    -fx-background-color: #d1ecf1;
+    -fx-border-color: #74b9ff;
+}
+
+.quest-panel {
+    -fx-background-color: #d4edda;
+    -fx-border-color: #00b894;
+}
+
+/* === Barres d'outils === */
+.toolbar {
+    -fx-background-color: #2c3e50;
+    -fx-padding: 5px 10px;
+}
+
+.toolbar .label {
+    -fx-text-fill: white;
+}
+
+.toolbar .separator {
+    -fx-background-color: #34495e;
+}
+
+/* === Status bar === */
+.status-bar {
+    -fx-background-color: #34495e;
+    -fx-padding: 8px 15px;
+}
+
+.status-bar .label {
+    -fx-text-fill: #ecf0f1;
+}
+
+.status-bar .label.current-task {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* === Dialogues et alertes === */
+.dialog-pane {
+    -fx-background-color: white;
+}
+
+.dialog-pane > .header-panel {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+}
+
+.dialog-pane > .content {
+    -fx-padding: 20px;
+}
+
+/* === Animations et transitions === */
+.fade-in {
+    -fx-opacity: 0;
+}
+
+.fade-in.active {
+    -fx-opacity: 1;
+}
+
+/* Animation pour les notifications */
+@keyframes slideInRight {
+    from {
+        -fx-translate-x: 100%;
+        -fx-opacity: 0;
+    }
+    to {
+        -fx-translate-x: 0;
+        -fx-opacity: 1;
+    }
+}
+
+.notification {
+    -fx-background-color: rgba(52, 73, 94, 0.9);
+    -fx-text-fill: white;
+    -fx-padding: 10px 15px;
+    -fx-background-radius: 5px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 3);
+}
+
+.notification.success {
+    -fx-background-color: rgba(39, 174, 96, 0.9);
+}
+
+.notification.warning {
+    -fx-background-color: rgba(243, 156, 18, 0.9);
+}
+
+.notification.error {
+    -fx-background-color: rgba(231, 76, 60, 0.9);
+}
+
+/* === Tooltips personnalisés === */
+.tooltip {
+    -fx-background-color: rgba(44, 62, 80, 0.95);
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-padding: 5px 8px;
+    -fx-background-radius: 3px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 5, 0, 0, 2);
+}
+
+/* === Scroll bars === */
+.scroll-bar {
+    -fx-background-color: #ecf0f1;
+}
+
+.scroll-bar .track {
+    -fx-background-color: #ecf0f1;
+    -fx-background-radius: 0;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #bdc3c7;
+    -fx-background-radius: 3px;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #95a5a6;
+}
+
+.scroll-bar .thumb:pressed {
+    -fx-background-color: #7f8c8d;
+}
+
+/* === Effets spéciaux === */
+.glow-effect {
+    -fx-effect: dropshadow(gaussian, #3498db, 10, 0, 0, 0);
+}
+
+.pulse-effect {
+    -fx-effect: dropshadow(gaussian, rgba(39, 174, 96, 0.8), 15, 0, 0, 0);
+}
+
+/* Effet de brillance pour les objets rares */
+.rare-item {
+    -fx-background-color: linear-gradient(45deg, rgba(255, 215, 0, 0.3), rgba(255, 140, 0, 0.3));
+    -fx-border-color: #ffd700;
+    -fx-border-width: 1px;
+}
+
+.epic-item {
+    -fx-background-color: linear-gradient(45deg, rgba(138, 43, 226, 0.3), rgba(75, 0, 130, 0.3));
+    -fx-border-color: #9932cc;
+    -fx-border-width: 1px;
+}
+
+.legendary-item {
+    -fx-background-color: linear-gradient(45deg, rgba(255, 165, 0, 0.3), rgba(255, 69, 0, 0.3));
+    -fx-border-color: #ff4500;
+    -fx-border-width: 2px;
+    -fx-effect: dropshadow(gaussian, #ff4500, 5, 0, 0, 0);
+}
+
+/* === Responsive design === */
+/* Ajustements pour les petits écrans */
+@media screen and (max-width: 1024px) {
+    .root {
+        -fx-font-size: 11px;
+    }
+    
+    .button {
+        -fx-padding: 6px 12px;
+    }
+    
+    .table-view .table-cell,
+    .list-cell {
+        -fx-padding: 3px;
+    }
+}
+
+/* === Thème sombre (classe alternative) === */
+.root.dark-theme {
+    -fx-background-color: #2c3e50;
+}
+
+.dark-theme .content-panel {
+    -fx-background-color: #34495e;
+    -fx-border-color: #4a5f7a;
+}
+
+.dark-theme .label {
+    -fx-text-fill: #ecf0f1;
+}
+
+.dark-theme .table-view {
+    -fx-background-color: #34495e;
+    -fx-border-color: #4a5f7a;
+}
+
+.dark-theme .table-view .table-cell {
+    -fx-text-fill: #ecf0f1;
+    -fx-border-color: #4a5f7a;
+}
+
+.dark-theme .list-view {
+    -fx-background-color: #34495e;
+    -fx-border-color: #4a5f7a;
+}
+
+.dark-theme .list-cell {
+    -fx-text-fill: #ecf0f1;
+    -fx-border-color: #4a5f7a;
+}
+
+/* === Accessibilité === */
+/* Amélioration du contraste pour l'accessibilité */
+.high-contrast .button {
+    -fx-border-color: #000000;
+    -fx-border-width: 2px;
+}
+
+.high-contrast .table-view,
+.high-contrast .list-view {
+    -fx-border-color: #000000;
+    -fx-border-width: 2px;
+}
+
+/* Support pour les modes de réduction de mouvement */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        -fx-animation-duration: 0.01ms !important;
+        -fx-animation-iteration-count: 1 !important;
+    }
+}
+
+/* === États d'interaction === */
+.interactive:hover {
+    -fx-cursor: hand;
+    -fx-opacity: 0.8;
+}
+
+.interactive:pressed {
+    -fx-opacity: 0.6;
+}
+
+.disabled {
+    -fx-opacity: 0.6;
+    -fx-cursor: default;
+}
+
+/* === Indicateurs visuels pour le gameplay === */
+.level-up-notification {
+    -fx-background-color: linear-gradient(45deg, #f1c40f, #f39c12);
+    -fx-text-fill: #2c3e50;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(241, 196, 15, 0.8), 15, 0, 0, 0);
+}
+
+.quest-complete-notification {
+    -fx-background-color: linear-gradient(45deg, #2ecc71, #27ae60);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.item-found-notification {
+    -fx-background-color: linear-gradient(45deg, #3498db, #2980b9);
+    -fx-text-fill: white;
+}

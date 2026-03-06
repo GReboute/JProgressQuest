@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<?import java.lang.String?>
+
+<VBox xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.JProgressQuest.controller.MainController">
+   <children>
+      <!-- Barre de titre et contrôles -->
+      <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-background-color: #2c3e50; -fx-padding: 5;">
+         <children>
+            <Label style="-fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold;" text="JProgressQuest" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Button fx:id="newGameButton" mnemonicParsing="false" onAction="#handleNewGameAction" text="Nouveau Jeu" />
+            <Button fx:id="loadButton" mnemonicParsing="false" onAction="#handleLoadAction" text="Charger" />
+            <Button fx:id="saveButton" mnemonicParsing="false" onAction="#handleSaveAction" text="Sauver" />
+            <Separator orientation="VERTICAL" />
+            <Button fx:id="playPauseButton" mnemonicParsing="false" onAction="#handlePlayPauseAction" 
+                    style="-fx-background-color: #27ae60; -fx-text-fill: white;" text="Play" />
+            <Button fx:id="settingsButton" mnemonicParsing="false" onAction="#handleSettingsAction" text="Paramètres" />
+         </children>
+      </HBox>
+      
+      <!-- Contenu principal -->
+      <HBox VBox.vgrow="ALWAYS">
+         <children>
+            <!-- Panneau gauche - Character Sheet -->
+            <VBox minWidth="250" prefWidth="250" spacing="10" style="-fx-background-color: #ecf0f1; -fx-padding: 10;">
+               <children>
+                  <!-- Informations du personnage -->
+                  <VBox spacing="5" style="-fx-background-color: white; -fx-padding: 10; -fx-border-color: #bdc3c7;">
+                     <children>
+                        <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Feuille de Personnage" />
+                        <Separator />
+                        
+                        <!-- Traits -->
+                        <GridPane hgap="10" vgap="5">
+                           <columnConstraints>
+                              <ColumnConstraints hgrow="NEVER" minWidth="60" />
+                              <ColumnConstraints hgrow="ALWAYS" />
+                           </columnConstraints>
+                           <children>
+                              <Label text="Nom:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                              <Label fx:id="characterName" style="-fx-font-weight: bold;" text="---" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                              
+                              <Label text="Race:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                              <Label fx:id="characterRace" text="---" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                              
+                              <Label text="Classe:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                              <Label fx:id="characterClass" text="---" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                              
+                              <Label text="Niveau:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                              <Label fx:id="characterLevel" style="-fx-font-weight: bold;" text="1" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                           </children>
+                        </GridPane>
+                     </children>
+                  </VBox>
+                  
+                  <!-- Statistiques -->
+                  <VBox spacing="5" style="-fx-background-color: white; -fx-padding: 10; -fx-border-color: #bdc3c7;">
+                     <children>
+                        <Label style="-fx-font-weight: bold;" text="Statistiques" />
+                        <Separator />
+                        
+                        <GridPane hgap="10" vgap="3">
+                           <columnConstraints>
+                              <ColumnConstraints hgrow="NEVER" minWidth="40" />
+                              <ColumnConstraints hgrow="ALWAYS" />
+                           </columnConstraints>
+                           <children>
+                              <Label text="FOR:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                              <Label fx:id="strStat" text="10" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                              
+                              <Label text="CON:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                              <Label fx:id="conStat" text="10" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                              
+                              <Label text="DEX:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                              <Label fx:id="dexStat" text="10" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                              
+                              <Label text="INT:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                              <Label fx:id="intStat" text="10" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                              
+                              <Label text="SAG:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                              <Label fx:id="wisStat" text="10" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                              
+                              <Label text="CHA:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+                              <Label fx:id="chaStat" text="10" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                              
+                              <Separator GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="6" />
+                              
+                              <Label text="PV Max:" GridPane.columnIndex="0" GridPane.rowIndex="7" />
+                              <Label fx:id="hpMaxStat" text="10" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+                              
+                              <Label text="PM Max:" GridPane.columnIndex="0" GridPane.rowIndex="8" />
+                              <Label fx:id="mpMaxStat" text="10" GridPane.columnIndex="1" GridPane.rowIndex="8" />
+                           </children>
+                        </GridPane>
+                     </children>
+                  </VBox>
+                  
+                  <!-- Barre d'expérience -->
+                  <VBox spacing="3">
+                     <children>
+                        <Label style="-fx-font-weight: bold;" text="Expérience" />
+                        <ProgressBar fx:id="experienceBar" maxWidth="Infinity" progress="0.0" />
+                        <Label fx:id="experienceLabel" style="-fx-font-size: 10px;" text="0/100 XP" />
+                     </children>
+                  </VBox>
+                  
+                  <!-- Livre de sorts -->
+                  <VBox spacing="5" style="-fx-background-color: white; -fx-padding: 10; -fx-border-color: #bdc3c7;" VBox.vgrow="ALWAYS">
+                     <children>
+                        <Label style="-fx-font-weight: bold;" text="Livre de Sorts" />
+                        <Separator />
+                        <TableView fx:id="spellTable" VBox.vgrow="ALWAYS">
+                           <columns>
+                              <TableColumn fx:id="spellNameColumn" prefWidth="120" text="Sort" />
+                              <TableColumn fx:id="spellLevelColumn" prefWidth="50" text="Niveau" />
+                           </columns>
+                        </TableView>
+                     </children>
+                  </VBox>
+               </children>
+            </VBox>
+            
+            <!-- Panneau central - Équipement et Inventaire -->
+            <VBox minWidth="300" prefWidth="300" spacing="10" style="-fx-background-color: #ecf0f1; -fx-padding: 10;">
+               <children>
+                  <!-- Équipement -->
+                  <VBox spacing="5" style="-fx-background-color: white; -fx-padding: 10; -fx-border-color: #bdc3c7;">
+                     <children>
+                        <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Équipement" />
+                        <Separator />
+                        <TableView fx:id="equipmentTable" prefHeight="200">
+                           <columns>
+                              <TableColumn fx:id="equipmentSlotColumn" prefWidth="100" text="Emplacement" />
+                              <TableColumn fx:id="equipmentItemColumn" prefWidth="180" text="Objet" />
+                           </columns>
+                        </TableView>
+                     </children>
+                  </VBox>
+                  
+                  <!-- Inventaire -->
+                  <VBox spacing="5" style="-fx-background-color: white; -fx-padding: 10; -fx-border-color: #bdc3c7;" VBox.vgrow="ALWAYS">
+                     <children>
+                        <Label style="-fx-font-weight: bold;" text="Inventaire" />
+                        <Separator />
+                        <TableView fx:id="inventoryTable" VBox.vgrow="ALWAYS">
+                           <columns>
+                              <TableColumn fx:id="inventoryItemColumn" prefWidth="200" text="Objet" />
+                              <TableColumn fx:id="inventoryQuantityColumn" prefWidth="80" text="Quantité" />
+                           </columns>
+                        </TableView>
+                     </children>
+                  </VBox>
+                  
+                  <!-- Barre d'encombrement -->
+                  <VBox spacing="3">
+                     <children>
+                        <Label style="-fx-font-weight: bold;" text="Encombrement" />
+                        <ProgressBar fx:id="encumbranceBar" maxWidth="Infinity" progress="0.0" />
+                        <Label fx:id="encumbranceLabel" style="-fx-font-size: 10px;" text="0/20 cubits" />
+                     </children>
+                  </VBox>
+               </children>
+            </VBox>
+            
+            <!-- Panneau droit - Quêtes et Intrigue -->
+            <VBox minWidth="300" prefWidth="300" spacing="10" style="-fx-background-color: #ecf0f1; -fx-padding: 10;" HBox.hgrow="ALWAYS">
+               <children>
+                  <!-- Développement de l'intrigue -->
+                  <VBox spacing="5" style="-fx-background-color: white; -fx-padding: 10; -fx-border-color: #bdc3c7;">
+                     <children>
+                        <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Développement de l'Intrigue" />
+                        <Separator />
+                        <ListView fx:id="plotList" prefHeight="120" />
+                        <VBox spacing="3">
+                           <children>
+                              <ProgressBar fx:id="plotBar" maxWidth="Infinity" progress="0.0" />
+                              <Label fx:id="plotLabel" style="-fx-font-size: 10px;" text="0% terminé" />
+                           </children>
+                        </VBox>
+                     </children>
+                  </VBox>
+                  
+                  <!-- Quêtes -->
+                  <VBox spacing="5" style="-fx-background-color: white; -fx-padding: 10; -fx-border-color: #bdc3c7;" VBox.vgrow="ALWAYS">
+                     <children>
+                        <Label style="-fx-font-weight: bold;" text="Quêtes" />
+                        <Separator />
+                        <ListView fx:id="questList" VBox.vgrow="ALWAYS" />
+                        <VBox spacing="3">
+                           <children>
+                              <ProgressBar fx:id="questBar" maxWidth="Infinity" progress="0.0" />
+                              <Label fx:id="questLabel" style="-fx-font-size: 10px;" text="0% terminé" />
+                           </children>
+                        </VBox>
+                     </children>
+                  </VBox>
+               </children>
+            </VBox>
+         </children>
+      </HBox>
+      
+      <!-- Barre de statut en bas -->
+      <VBox spacing="5" style="-fx-background-color: #34495e; -fx-padding: 10;">
+         <children>
+            <!-- Tâche actuelle -->
+            <Label fx:id="currentTaskLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="En attente..." />
+            
+            <!-- Barre de progression de la tâche -->
+            <HBox alignment="CENTER_LEFT" spacing="10">
+               <children>
+                  <ProgressBar fx:id="taskBar" maxWidth="Infinity" progress="0.0" HBox.hgrow="ALWAYS" />
+                  <Label fx:id="taskLabel" style="-fx-text-fill: white; -fx-font-size: 10px;" text="0%" />
+               </children>
+            </HBox>
+            
+            <!-- Statut du jeu -->
+            <HBox alignment="CENTER_LEFT" spacing="10">
+               <children>
+                  <Label style="-fx-text-fill: #bdc3c7;" text="Statut:" />
+                  <Label fx:id="gameStatusLabel" style="-fx-text-fill: #ecf0f1;" text="Prêt" />
+                  <Region HBox.hgrow="ALWAYS" />
+                  <Label style="-fx-text-fill: #bdc3c7; -fx-font-size: 10px;" text="JProgressQuest v1.0 - Java 17 + JavaFX" />
+               </children>
+            </HBox>
+         </children>
+      </VBox>
+   </children>
+</VBox>

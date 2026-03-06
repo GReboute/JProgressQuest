@@ -1,0 +1,261 @@
+// Base Task class - utilise les enums et l'héritage moderne de Java
+
+package com.JProgressQuest.model;
+
+import com.JProgressQuest.model.Constants;
+import com.JProgressQuest.model.Game;
+import com.JProgressQuest.util.StringUtils;
+
+public abstract class Task {
+    public enum TaskType {
+        KILL,
+        BUYING,
+        MARKET,
+        SELL,
+        HEADING,
+        PLOT,
+        CUSTOM
+    }
+    
+    protected final TaskType type;
+    protected final String description;
+    protected final long durationMs;
+    protected final long startTime;
+    
+    protected Task(TaskType type, String description, long durationMs) {
+        this.type = type;
+        this.description = description;
+        this.durationMs = durationMs;
+        this.startTime = System.currentTimeMillis();
+    }
+    
+    public TaskType getType() { return type; }
+    public String getDescription() { return description; }
+    public long getDurationMs() { return durationMs; }
+    
+    // Méthode moderne avec Optional (Java 8+)
+    public boolean isComplete() {
+        return System.currentTimeMillis() - startTime >= durationMs;
+    }
+    
+    // Méthode abstraite pour le traitement spécifique
+    public abstract void onComplete(Game game);
+    
+    // Pattern moderne avec toString() bien défini
+    @Override
+    public String toString() {
+        return String.format("%s[%s, %dms]", 
+            getClass().getSimpleName(), description, durationMs);
+    }
+}
+
+// Classe spécialisée pour les combats
+public class KillTask extends Task {
+    private final Monster target;
+    private final int level;
+    private final boolean questMonster;
+    
+    public KillTask(Monster target, int level, long durationMs) {
+        super(TaskType.KILL, "Executing " + target.getDescription(), durationMs);
+        this.target = target;
+        this.level = level;
+        this.questMonster = target.isQuestMonster();
+    }
+    
+    @Override
+    public void onComplete(Game game) {
+        // Récompenses selon le type de monstre
+        if (target.isSpecialDrop()) {
+            game.getInventory().addItem(ItemGenerator.generateSpecialItem());
+        } else if (target.getDropItem() != null) {
+            game.getInventory().addItem(target.getDropItem());
+        }
+        
+        // Expérience
+        game.addExperience(calculateExperience());
+    }
+    
+    private int calculateExperience() {
+        return level * 10; // Formule simplifiée
+    }
+    
+    public Monster getTarget() { return target; }
+    public int getLevel() { return level; }
+}
+
+// Classe pour les achats d'équipement
+public class BuyingTask extends Task {
+    private final int cost;
+    
+    public BuyingTask(int cost) {
+        super(TaskType.BUYING, "Negotiating purchase of better equipment", 5000);
+        this.cost = cost;
+    }
+    
+    @Override
+    public void onComplete(Game game) {
+        game.getInventory().removeGold(cost);
+        Equipment newEquip = EquipmentGenerator.generateEquipment(
+            game.getCharacter().getLevel()
+        );
+        game.getCharacter().equipItem(newEquip);
+    }
+}
+
+// Classe pour les ventes au marché
+public class MarketTask extends Task {
+    private final boolean hasItemsToSell;
+    
+    public MarketTask(Game game) {
+        super(TaskType.MARKET, "Heading to market to sell loot", 4000);
+        this.hasItemsToSell = game.getInventory().hasItemsToSell();
+    }
+    
+    @Override
+    public void onComplete(Game game) {
+        if (hasItemsToSell) {
+            // Vendre le premier item
+            game.sellFirstItem();
+        }
+    }
+}
+
+// Tâche générique pour les événements de plot
+public class PlotTask extends Task {
+    private final String plotText;
+    
+    public PlotTask(String plotText, long durationMs) {
+        super(TaskType.PLOT, plotText, durationMs);
+        this.plotText = plotText;
+    }
+    
+    @Override
+    public void onComplete(Game game) {
+        game.advancePlot(plotText);
+    }
+    
+    public String getPlotText() { return plotText; }
+}
+
+// Factory moderne pour créer les tâches (Pattern Factory + Builder)
+public class TaskFactory {
+    private final Game game;
+    private final Random random; // ThreadLocalRandom serait plus moderne (Java 7+)
+    
+    public TaskFactory(Game game) {
+        this.game = game;
+        this.random = ThreadLocalRandom.current(); // Java 7+ pour thread-safety
+    }
+    
+    // Utilise les records Java 14+ pour les paramètres
+    public record TaskRequest(TaskType type, Map<String, Object> params) {}
+    
+    public Task createTask(TaskRequest request) {
+        return switch (request.type()) { // Switch expressions Java 14+
+            case KILL -> createKillTask(request.params());
+            case BUYING -> createBuyingTask();
+            case MARKET -> new MarketTask(game);
+            case HEADING -> createHeadingTask();
+            case PLOT -> createPlotTask(request.params());
+            default -> throw new IllegalArgumentException("Unknown task type: " + request.type());
+        };
+    }
+    
+    private KillTask createKillTask(Map<String, Object> params) {
+        int level = game.getCharacter().getLevel();
+        Monster monster = MonsterGenerator.generateMonster(level, game);
+        long duration = calculateKillDuration(monster, level);
+        return new KillTask(monster, level, duration);
+    }
+    
+    private BuyingTask createBuyingTask() {
+        int cost = EquipmentPricing.calculatePrice(game.getCharacter().getLevel());
+        return new BuyingTask(cost);
+    }
+    
+    private Task createHeadingTask() {
+        return new Task(TaskType.HEADING, "Heading to the killing fields", 4000) {
+            @Override
+            public void onComplete(Game game) {
+                // Prêt pour le combat
+            }
+        };
+    }
+    
+    private PlotTask createPlotTask(Map<String, Object> params) {
+        String text = (String) params.get("text");
+        Long duration = (Long) params.get("duration");
+        return new PlotTask(text, duration);
+    }
+    
+    private long calculateKillDuration(Monster monster, int level) {
+        // Formule basée sur le JavaScript original
+        int inventoryLabelAlsoGameStyleTag = 3;
+        return (2L * inventoryLabelAlsoGameStyleTag * monster.getLevel() * 1000L) / level;
+    }
+}
+
+// Gestionnaire de queue moderne avec CompletableFuture (Java 8+)
+public class TaskQueue {
+    private final Queue<Task> taskQueue = new ArrayDeque<>(); // ArrayDeque plus efficace que LinkedList
+    private final Game game;
+    private Optional<Task> currentTask = Optional.empty(); // Optional Java 8+
+    
+    // ExecutorService pour la gestion asynchrone (moderne)
+    private final ScheduledExecutorService scheduler = 
+        Executors.newSingleThreadScheduledExecutor();
+    
+    public TaskQueue(Game game) {
+        this.game = game;
+    }
+    
+    public void addTask(Task task) {
+        taskQueue.offer(task);
+        processQueue();
+    }
+    
+    public void addTasks(Collection<Task> tasks) { // Accepte Collection pour plus de flexibilité
+        taskQueue.addAll(tasks);
+        processQueue();
+    }
+    
+    private void processQueue() {
+        if (currentTask.isEmpty() && !taskQueue.isEmpty()) {
+            currentTask = Optional.of(taskQueue.poll());
+            scheduleTaskCompletion();
+        }
+    }
+    
+    private void scheduleTaskCompletion() {
+        currentTask.ifPresent(task -> {
+            // Utilisation de CompletableFuture pour l'asynchrone (Java 8+)
+            CompletableFuture.delayedExecutor(task.getDurationMs(), TimeUnit.MILLISECONDS, scheduler)
+                .execute(() -> {
+                    task.onComplete(game);
+                    currentTask = Optional.empty();
+                    processQueue(); // Traiter la prochaine tâche
+                });
+        });
+    }
+    
+    public Optional<Task> getCurrentTask() {
+        return currentTask;
+    }
+    
+    public boolean isEmpty() {
+        return taskQueue.isEmpty() && currentTask.isEmpty();
+    }
+    
+    // Méthode de nettoyage moderne avec try-with-resources
+    public void shutdown() {
+        scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt(); // Bonne pratique moderne
+        }
+    }
+}
