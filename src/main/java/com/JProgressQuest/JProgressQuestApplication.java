@@ -3,6 +3,8 @@ package com.JProgressQuest;
 import com.JProgressQuest.controller.MainController;
 import com.JProgressQuest.service.GameService;
 import com.JProgressQuest.service.StorageService;
+import com.JProgressQuest.service.NameGenerator;
+import com.JProgressQuest.service.RandomService;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -69,7 +71,10 @@ public class JProgressQuestApplication extends Application {
         try {
             // Initialisation des services
             storageService = new StorageService();
-            gameService = new GameService();
+            // Injection de dépendances pour s'assurer que tous les services partagent les mêmes instances
+            RandomService randomService = new RandomService();
+            NameGenerator nameGenerator = new NameGenerator(randomService);
+            gameService = new GameService(randomService, nameGenerator, storageService);
             
             logger.info("Services initialisés avec succès");
             

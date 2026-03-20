@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,6 +33,7 @@ public class GameService {
     // État actuel du jeu
     private Game currentGame;
     private boolean gameRunning = false;
+    private GameSpeed currentGameSpeed = GameSpeed.NORMAL; // Vitesse par défaut
     
     // Gestionnaire d'événements - Interface fonctionnelle (Java 8+)
     @FunctionalInterface
@@ -40,6 +42,36 @@ public class GameService {
     }
     
     private GameEventListener eventListener;
+
+    /**
+     * Énumération des vitesses de jeu possibles.
+     */
+    public enum GameSpeed {
+        SLOW_2X("2x Lente", 0.5),
+        NORMAL("Normale (1x)", 1.0),
+        FAST_2X("2x Rapide", 2.0),
+        FAST_5X("5x Rapide", 5.0),
+        FAST_10X("10x Rapide", 10.0),
+        FAST_25X("25x Rapide", 25.0),
+        FAST_50X("50x Rapide", 50.0),
+        FAST_100X("100x Rapide", 100.0);
+
+        private final String displayName;
+        private final double multiplier;
+
+        GameSpeed(String displayName, double multiplier) {
+            this.displayName = displayName;
+            this.multiplier = multiplier;
+        }
+
+        public double getMultiplier() { return multiplier; }
+        public String getDisplayName() { return displayName; }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
     
     /**
      * Constructeur avec injection de dépendances
@@ -85,13 +117,16 @@ public class GameService {
         equipStartingGear(game);
         
         // Queue de tâches initiale - Text Block (Java 15+) pour plus de lisibilité
-        String initialQuest = """
-            Experiencing an enigmatic and foreboding night vision
-            """.trim();
-        
-        game.getTaskBar().reset(10000); // 10 secondes
-        game.setCurrentTask(initialQuest);
-        
+        var queue = game.getTaskQueue();
+        queue.add("task|10000|Experiencing an enigmatic and foreboding night vision");
+        queue.add("task|6000|Much is revealed about that wise old bastard you'd underestimated");
+        queue.add("task|6000|A shocking series of events leaves you alone and bewildered, but resolute");
+        queue.add("task|4000|Drawing upon an unrealized reserve of determination, you set out on a long and dangerous journey");
+        queue.add("plot|2000|Loading");
+
+        // La barre de tâche est "terminée" pour déclencher la première tâche de la file d'attente.
+        game.getTaskBar().reset(0);
+
         // Initialisation des barres de progression
         initializeProgressBars(game);
         
@@ -204,8 +239,10 @@ public class GameService {
         }
         
         try {
-            // Progression de la tâche actuelle
-            currentGame.getTaskBar().increment(100); // 100ms de progression
+            // Progression de la tâche actuelle en fonction de la vitesse
+            int baseTickInterval = 100; // ms, correspond à la fréquence du scheduler
+            int incrementAmount = (int) (baseTickInterval * currentGameSpeed.getMultiplier());
+            currentGame.getTaskBar().increment(incrementAmount);
             
             // Vérification si la tâche est terminée
             if (currentGame.getTaskBar().isDone()) {
@@ -231,18 +268,36 @@ public class GameService {
         logger.info("Fin de tâche: '{}' [{}]", currentGame.getCurrentTask(), taskType);
         
         try {
-            // Pattern Matching avec instanceof (Java 16+) - ici simulé avec des strings
+            boolean wasKillTask = "kill".equals(taskType);
+            int progressAmount = currentGame.getTaskBar().getMax() / 1000;
+
+            // Actions spécifiques à la fin de tâche
             switch (taskType) {
                 case "kill" -> completeKillTask();
                 case "buying" -> completeBuyingTask();
-                case "selling" -> completeSellingTask();
-                case "market" -> completeMarketTask();
+                case "selling", "market" -> completeSellingTask();
                 case "heading" -> completeHeadingTask();
                 default -> logger.debug("Pas d'action spécifique pour le type de tâche: {}", taskType);
             }
-            
+
+            // Progression de l'intrigue (selon la logique JS: si kill task ou act 0)
+            if (wasKillTask || currentGame.getCurrentAct() == 0) {
+                currentGame.getPlotBar().increment(progressAmount);
+
+                if (currentGame.getPlotBar().isDone()) {
+                    logger.info("Plot bar est pleine. Acte actuel: {}", currentGame.getCurrentAct());
+                    // Logique demandée: cinématique pour l'acte 0, complétion directe ensuite.
+                    // Note: L'original JS lance une cinématique à chaque acte.
+                    if (currentGame.getCurrentAct() == 0) {
+                        interplotCinematic();
+                    } else {
+                        completeAct();
+                    }
+                }
+            }
+
             // Génération de la prochaine tâche
-            generateNextTask();
+            dequeueOrGenerateNextTask();
         } catch (Exception e) {
             logger.error("Erreur lors de la transition de tâche (type: {})", taskType, e);
             // Tentative de récupération pour éviter la boucle infinie
@@ -250,7 +305,7 @@ public class GameService {
             currentGame.setTaskType("heading");
         }
     }
-    
+
     /**
      * Termine une tâche de combat
      */
@@ -291,70 +346,118 @@ public class GameService {
         int equipmentCost = calculateEquipmentPrice();
         currentGame.addToInventory("Gold", -equipmentCost);
         
-        // Génération d'un nouvel équipement
-        String newEquipment = generateEquipment();
-        String slot = randomService.pick(List.of("Weapon", "Shield", "Helm", "Hauberk"));
+        // On choisit d'abord le slot, puis on génère l'équipement adapté
+        String slot = randomService.pick(Constants.EQUIPS);
+        String newEquipment = generateEquipment(slot);
         currentGame.equipItem(slot, newEquipment);
         
-        logger.info("Équipement acheté: {} pour {} gold", newEquipment, equipmentCost);
+        logger.info("Équipement acheté: {} pour {} gold sur {}", newEquipment, equipmentCost, slot);
+        fireGameEvent(new Constants.GameEvent.EquipmentBought(newEquipment, equipmentCost, slot));
     }
     
     /**
      * Termine une tâche de vente
      */
     private void completeSellingTask() {
-        // Logique de vente d'objets de l'inventaire
+        // Logique de vente du premier objet de l'inventaire qui n'est pas de l'or.
         var inventory = currentGame.getInventory();
-        if (inventory.size() > 1) { // Garde au moins l'or
-            var itemToSell = inventory.get(1); // Premier objet après l'or
+
+        Optional<Game.InventoryItem> itemToSellOpt = inventory.stream()
+                .filter(item -> !item.name().equalsIgnoreCase("Gold"))
+                .findFirst();
+
+        if (itemToSellOpt.isPresent()) {
+            var itemToSell = itemToSellOpt.get();
             int sellPrice = itemToSell.quantity() * (Integer) currentGame.getTrait("Level");
-            
+
             // Bonus si l'objet a un préfixe spécial
             if (itemToSell.name().contains(" of ")) {
                 sellPrice *= (1 + randomService.random(10)) * (1 + randomService.random((Integer) currentGame.getTrait("Level")));
             }
-            
-            inventory.remove(itemToSell);
-            currentGame.addToInventory("Gold", sellPrice);
-            
-            logger.info("Objet vendu: {} pour {} gold", itemToSell.name(), sellPrice);
+
+            // Utilisation de la méthode encapsulée pour une suppression fiable
+            if (currentGame.removeInventoryStack(itemToSell.name())) {
+                currentGame.addToInventory("Gold", sellPrice);
+                logger.info("Objet vendu: {} pour {} gold", itemToSell.name(), sellPrice);
+            } else {
+                logger.error("Échec de la vente, l'objet {} n'a pas pu être retiré de l'inventaire.", itemToSell.name());
+            }
         }
-    }
-    
-    /**
-     * Termine une visite au marché
-     */
-    private void completeMarketTask() {
-        // Continue à vendre jusqu'à ce que l'inventaire soit vide
-        completeSellingTask();
     }
     
     /**
      * Termine un déplacement
      */
     private void completeHeadingTask() {
-        currentGame.logEvent("Arrivé sur le terrain de chasse");
+        // Pas d'action spécifique, la tâche suivante sera déterminée par dequeueOrGenerateNextTask
+        logger.debug("Arrivé à destination.");
     }
     
     /**
      * Génère la prochaine tâche
      */
-    private void generateNextTask() {
-        logger.debug("Analyse de la prochaine tâche à générer...");
+    private void dequeueOrGenerateNextTask() {
+        var queue = currentGame.getTaskQueue();
 
-        // Vérification de l'encombrement
-        if (currentGame.getEncumbranceBar().isDone()) {
-            logger.info("Inventaire plein -> Retour au marché");
-            createTask("Heading to market to sell loot", 4000);
-            currentGame.setTaskType("market");
+        if (!queue.isEmpty()) {
+            String taskString = queue.poll(); // poll() retrieves and removes the head
+            logger.debug("Tâche récupérée de la file d'attente: {}", taskString);
+            String[] parts = taskString.split("\\|", 3);
+            if (parts.length < 3) {
+                logger.warn("Tâche malformée dans la file d'attente: {}", taskString);
+                generateNormalTask(); // Tente de récupérer
+                return;
+            }
+            String type = parts[0];
+            int duration = Integer.parseInt(parts[1]);
+            String description = parts[2];
+
+            if ("plot".equals(type)) {
+                completeAct();
+                description = "Loading " + currentGame.getBestPlot();
+            }
+            
+            createTask(description, duration);
+            currentGame.setTaskType(type);
             return;
         }
-        
-        // Vérification de l'argent pour acheter de l'équipement
+
+        // Si la file est vide, on génère une tâche normale
+        generateNormalTask();
+    }
+
+    private void generateNormalTask() {
+        logger.debug("Génération d'une tâche normale...");
+        String previousTaskType = currentGame.getTaskType();
+
+        // Priorité 1: Vendre le butin si l'inventaire est plein ou si on était déjà en train de vendre.
+        boolean needsToSell = currentGame.getEncumbranceBar().isDone() || "selling".equals(previousTaskType);
+        if (needsToSell) {
+            Optional<Game.InventoryItem> itemToSellOpt = currentGame.getInventory().stream()
+                    .filter(item -> !item.name().equalsIgnoreCase("Gold"))
+                    .findFirst();
+
+            if (itemToSellOpt.isPresent()) {
+                // Si on a trouvé un objet à vendre, on s'assure d'être au marché.
+                if (!"selling".equals(previousTaskType) && !"heading".equals(previousTaskType)) {
+                    logger.info("Inventaire plein. Direction le marché pour vendre le butin.");
+                    createTask("Heading to market to sell loot", 4000);
+                    currentGame.setTaskType("heading");
+                } else {
+                    // On est au marché, on vend l'objet.
+                    var itemToSell = itemToSellOpt.get();
+                    logger.info("Au marché, vente de: {}.", itemToSell.name());
+                    createTask("Selling " + itemToSell.name(), 1000 + randomService.random(1000));
+                    currentGame.setTaskType("selling");
+                }
+                return; // On a une tâche de vente ou de déplacement, on s'arrête là.
+            }
+        }
+
+        // Priorité 2: Acheter de l'équipement si on a assez d'or.
         int goldAmount = getInventoryItem("Gold")
-            .map(Game.InventoryItem::quantity)
-            .orElse(0);
-            
+                .map(Game.InventoryItem::quantity)
+                .orElse(0);
         int equipPrice = calculateEquipmentPrice();
         if (goldAmount > equipPrice) {
             logger.info("Assez d'or ({}) pour équipement ({}) -> Achat", goldAmount, equipPrice);
@@ -362,16 +465,16 @@ public class GameService {
             currentGame.setTaskType("buying");
             return;
         }
-        
-        // Par défaut: aller chasser
-        if (!currentGame.getTaskType().equals("heading") && !currentGame.getTaskType().equals("kill")) {
+
+        // Priorité 3: Si rien d'autre à faire, on part à l'aventure.
+        if (!"kill".equals(currentGame.getTaskType()) && !"heading".equals(currentGame.getTaskType())) {
             logger.info("Déplacement vers le terrain de chasse");
             createTask("Heading to the killing fields", 4000);
             currentGame.setTaskType("heading");
             return;
         }
-        
-        // Génération d'une tâche de combat
+
+        // On est sur le terrain de chasse, on génère un combat.
         logger.info("Génération d'un combat");
         generateCombatTask();
     }
@@ -555,8 +658,8 @@ public class GameService {
         switch (rewardType) {
             case 0 -> learnRandomSpell();
             case 1 -> {
-                String equipment = generateEquipment();
                 String slot = randomService.pick(List.of("Weapon", "Shield", "Helm"));
+                String equipment = generateEquipment(slot);
                 currentGame.equipItem(slot, equipment);
             }
             case 2 -> improveTwoRandomStats();
@@ -589,6 +692,53 @@ public class GameService {
     }
     
     /**
+     * Génère une cinématique d'inter-acte en ajoutant des tâches à la file d'attente.
+     * Équivalent de la fonction InterplotCinematic en JavaScript.
+     */
+    private void interplotCinematic() {
+        logger.info("Début de la cinématique d'inter-acte.");
+        var queue = currentGame.getTaskQueue();
+        int scenario = randomService.random(3);
+
+        switch (scenario) {
+            case 0 -> {
+                queue.add("task|1000|Exhausted, you arrive at a friendly oasis in a hostile land");
+                queue.add("task|2000|You greet old friends and meet new allies");
+                queue.add("task|2000|You are privy to a council of powerful do-gooders");
+                queue.add("task|1000|There is much to be done. You are chosen!");
+            }
+            case 1 -> {
+                String nemesis = nameGenerator.generateNamedMonster((Integer) currentGame.getTrait("Level") + 3);
+                queue.add("task|1000|Your quarry is in sight, but a mighty enemy bars your path!");
+                queue.add("task|4000|A desperate struggle commences with " + nemesis);
+                int s = randomService.random(3);
+                for (int i = 0; i < randomService.random(1 + currentGame.getCurrentAct() + 1); i++) {
+                    s += 1 + randomService.random(2);
+                    switch (s % 3) {
+                        case 0 -> queue.add("task|2000|Locked in grim combat with " + nemesis);
+                        case 1 -> queue.add("task|2000|" + nemesis + " seems to have the upper hand");
+                        case 2 -> queue.add("task|2000|You seem to gain the advantage over " + nemesis);
+                    }
+                }
+                queue.add("task|3000|Victory! " + nemesis + " is slain! Exhausted, you lose consciousness");
+                queue.add("task|2000|You awake in a friendly place, but the road awaits");
+            }
+            case 2 -> {
+                String impressiveGuy = nameGenerator.generateImpressiveGuy();
+                String boringItem = randomService.pick(Constants.BORING_ITEMS);
+                queue.add("task|2000|Oh sweet relief! You've reached the kind protection of " + impressiveGuy);
+                queue.add("task|3000|There is rejoicing, and an unnerving encounter with " + impressiveGuy + " in private");
+                queue.add("task|2000|You forget your " + boringItem + " and go back to get it");
+                queue.add("task|2000|What's this!? You overhear something shocking!");
+                queue.add("task|2000|Could " + impressiveGuy + " be a dirty double-dealer?");
+                queue.add("task|3000|Who can possibly be trusted with this news!? -- Oh yes, of course");
+            }
+        }
+        // La tâche 'plot' déclenchera la complétion de l'acte via dequeueOrGenerateNextTask
+        queue.add("plot|1000|Loading");
+    }
+
+    /**
      * Complete un acte de l'histoire
      */
     private void completeAct() {
@@ -606,7 +756,7 @@ public class GameService {
         // Récompenses pour les actes
         if (newAct > 1) {
             findRandomItem();
-            String equipment = generateEquipment();
+            String equipment = generateEquipment("Weapon");
             currentGame.equipItem("Weapon", equipment);
         }
         
@@ -642,11 +792,20 @@ public class GameService {
     /**
      * Génère un équipement
      */
-    private String generateEquipment() {
+    private String generateEquipment(String slot) {
         int playerLevel = (Integer) currentGame.getTrait("Level");
         
-        // Sélection d'un équipement de base
-        String baseName = randomService.pick(Constants.WEAPONS); // Simplifié
+        // Sélection de la liste appropriée selon le slot
+        List<String> sourceList;
+        if ("Weapon".equals(slot)) {
+            sourceList = Constants.WEAPONS;
+        } else if ("Shield".equals(slot)) {
+            sourceList = Constants.SHIELDS;
+        } else {
+            sourceList = Constants.ARMORS;
+        }
+        
+        String baseName = randomService.pick(sourceList);
         String[] parts = baseName.split("\\|");
         String name = parts[0];
         int baseLevel = parts.length > 1 ? Integer.parseInt(parts[1]) : playerLevel;
@@ -659,8 +818,17 @@ public class GameService {
         
         // Ajout possible d'enchantements
         if (randomService.odds(1, 3)) {
-            String enchantment = randomService.pick(Constants.OFFENSE_ATTRIB).split("\\|")[0];
-            name = enchantment + " " + name;
+            // Choisir la bonne liste d'attributs (OFFENSE pour les armes, DEFENSE pour le reste).
+            List<String> attribList = "Weapon".equals(slot) ? Constants.OFFENSE_ATTRIB : Constants.DEFENSE_ATTRIB;
+            String enchantment = randomService.pick(attribList).split("\\|")[0];
+            
+            // Gestion intelligente des préfixes/suffixes
+            // Si l'enchantement commence par "of ", c'est un suffixe (ex: "of hacking")
+            if (enchantment.startsWith("of ")) {
+                name = name + " " + enchantment;
+            } else {
+                name = enchantment + " " + name;
+            }
         }
         
         return name;
@@ -749,6 +917,15 @@ public class GameService {
         return gameRunning;
     }
     
+    public void setGameSpeed(GameSpeed speed) {
+        this.currentGameSpeed = Objects.requireNonNull(speed);
+        logger.info("Vitesse du jeu réglée sur: {}", speed.getDisplayName());
+    }
+
+    public GameSpeed getGameSpeed() {
+        return currentGameSpeed;
+    }
+
     /**
      * Nettoie les ressources
      */

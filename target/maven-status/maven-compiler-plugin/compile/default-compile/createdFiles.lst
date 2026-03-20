@@ -16,6 +16,7 @@ com/JProgressQuest/service/NameGenerator.class
 com/JProgressQuest/JProgressQuestApplication.class
 com/JProgressQuest/JProgressQuestApplication$AppConfig.class
 com/JProgressQuest/model/Constants.class
+com/JProgressQuest/service/GameService$GameSpeed.class
 com/JProgressQuest/controller/MainController$EquipmentEntry.class
 com/JProgressQuest/util/StringUtils.class
 com/JProgressQuest/service/GameService$GameEventListener.class
@@ -35,6 +36,7 @@ com/JProgressQuest/controller/MainController$1.class
 com/JProgressQuest/model/Game$InventoryItem.class
 com/JProgressQuest/model/Game$OnlineInfo.class
 com/JProgressQuest/model/Constants$GameEvent$QuestComplete.class
+com/JProgressQuest/model/Constants$GameEvent$EquipmentBought.class
 com/JProgressQuest/service/GameService.class
 com/JProgressQuest/model/Constants$Monster.class
 com/JProgressQuest/service/StorageService$GameSummary.class

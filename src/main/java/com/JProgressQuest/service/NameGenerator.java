@@ -1,6 +1,7 @@
 package com.JProgressQuest.service;
 
 import com.JProgressQuest.model.Constants;
+import com.JProgressQuest.util.StringUtils;
 import java.util.List;
 
 /**
@@ -86,6 +87,58 @@ public class NameGenerator {
         ));
         
         return adjective + " " + noun;
+    }
+
+    /**
+     * Génère un nom de monstre avec un titre, proche d'un niveau donné.
+     * Équivalent de NamedMonster(level) en JS.
+     */
+    public String generateNamedMonster(int level) {
+        String bestMonsterName = "";
+        int bestMonsterLevel = 0;
+
+        if (Constants.MONSTERS == null || Constants.MONSTERS.isEmpty()) {
+            return generateName() + " the Mighty"; // Fallback
+        }
+
+        for (int i = 0; i < 5; i++) {
+            String monsterData = randomService.pick(Constants.MONSTERS);
+            String[] parts = monsterData.split("\\|");
+            if (parts.length < 2) continue; // Malformed data
+
+            try {
+                String currentName = parts[0];
+                int currentLevel = Integer.parseInt(parts[1]);
+
+                if (bestMonsterName.isEmpty() || Math.abs(level - currentLevel) < Math.abs(level - bestMonsterLevel)) {
+                    bestMonsterName = currentName;
+                    bestMonsterLevel = currentLevel;
+                }
+            } catch (NumberFormatException e) {
+                // Ignore malformed level
+            }
+        }
+
+        return generateName() + " the " + bestMonsterName;
+    }
+
+    /**
+     * Génère un nom de PNJ impressionnant.
+     * Équivalent de ImpressiveGuy() en JS.
+     */
+    public String generateImpressiveGuy() {
+        if (randomService.odds(1, 2)) {
+            if (Constants.RACES == null || Constants.RACES.isEmpty() || Constants.IMPRESSIVE_TITLES == null || Constants.IMPRESSIVE_TITLES.isEmpty()) {
+                return "The Big Cheese"; // Fallback
+            }
+            String race = StringUtils.split(randomService.pick(Constants.RACES), 0);
+            return "the " + randomService.pick(Constants.IMPRESSIVE_TITLES) + " of the " + StringUtils.plural(race);
+        } else {
+            if (Constants.IMPRESSIVE_TITLES == null || Constants.IMPRESSIVE_TITLES.isEmpty()) {
+                 return "Some Guy"; // Fallback
+            }
+            return randomService.pick(Constants.IMPRESSIVE_TITLES) + " " + generateName() + " of " + generateName();
+        }
     }
     
     /**

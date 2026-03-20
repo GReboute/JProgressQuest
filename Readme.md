@@ -1,6 +1,6 @@
 # JProgressQuest
 
-Une conversion Java 17 + JavaFX du célèbre jeu satirique "Progress Quest" originalement développé en JavaScript.
+Une conversion Java 23 + JavaFX du célèbre jeu satirique "Progress Quest" originalement développé en JavaScript.
 
 ![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square&logo=java)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17-blue?style=flat-square)
@@ -26,7 +26,7 @@ JProgressQuest est un "zero-player game" où vous créez un personnage RPG qui p
 
 ### Prérequis
 
-- **Java 17** ou supérieur (LTS recommandé)
+- **Java 23** ou supérieur (LTS recommandé)
 - **Maven 3.8** ou supérieur
 - **JavaFX 17** (inclus dans les dépendances Maven)
 
@@ -57,7 +57,7 @@ java -jar target/jprogressquest-1.0.0.jar
 
 ## 🏗️ Architecture
 
-Le projet utilise une architecture moderne Java 17 avec les patterns suivants :
+Le projet utilise une architecture moderne Java 17+ avec les patterns suivants :
 
 ### Structure du projet
 
@@ -84,7 +84,7 @@ src/main/java/com/progressquest/
 
 ### Technologies utilisées
 
-- **Java 17** : Records, Pattern Matching, Text Blocks, Sealed Classes
+- **Java 23** : Records, Pattern Matching, Text Blocks, Sealed Classes
 - **JavaFX 17** : Interface utilisateur moderne et réactive
 - **Jackson** : Sérialisation JSON pour les sauvegardes
 - **SLF4J + Logback** : Système de logging professionnel

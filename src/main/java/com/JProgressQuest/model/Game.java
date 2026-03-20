@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.JProgressQuest.service.RandomService;
+import com.JProgressQuest.util.StringUtils;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonSetter;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -34,7 +37,7 @@ public class Game {
     @JsonProperty("Spells")
     private List<SpellEntry> spells = new ArrayList<>();
     
-    @JsonProperty("Quests")
+    // La sérialisation est gérée par un getter/setter personnalisé
     private List<String> quests = new ArrayList<>();
     
     @JsonProperty("Plots")
@@ -330,27 +333,80 @@ public class Game {
      */
     public void addToInventory(String itemName, int quantity) {
         Optional<InventoryItem> existing = inventory.stream()
-            .filter(item -> item.name().equals(itemName))
+            .filter(item -> item.name().equalsIgnoreCase(itemName))
             .findFirst();
             
         if (existing.isPresent()) {
             InventoryItem item = existing.get();
             inventory.remove(item);
-            inventory.add(new InventoryItem(itemName, item.quantity() + quantity));
+            // On utilise le nom existant pour préserver la casse (ex: "Gold")
+            inventory.add(new InventoryItem(item.name(), item.quantity() + quantity));
         } else {
             inventory.add(new InventoryItem(itemName, quantity));
         }
+        
+        // S'assure que l'or est toujours en première position.
+        ensureGoldIsFirst();
         
         // Log de l'événement
         logEvent(String.format("Ajouté %d %s à l'inventaire", quantity, itemName));
     }
     
     /**
+     * Supprime une pile d'objets de l'inventaire par nom.
+     * @param itemName Le nom de l'objet à supprimer.
+     * @return true si l'inventaire a été modifié.
+     */
+    public boolean removeInventoryStack(String itemName) {
+        boolean removed = inventory.removeIf(item -> item.name().equalsIgnoreCase(itemName));
+        if (removed) {
+            logEvent(String.format("Supprimé %s de l'inventaire", itemName));
+        }
+        return removed;
+    }
+
+    /**
+     * Méthode privée pour garantir que l'or, s'il existe, est le premier
+     * élément de la liste d'inventaire.
+     */
+    private void ensureGoldIsFirst() {
+        Optional<InventoryItem> goldItem = inventory.stream()
+            .filter(item -> item.name().equalsIgnoreCase("Gold"))
+            .findFirst();
+
+        if (goldItem.isPresent()) {
+            InventoryItem gold = goldItem.get();
+            // On ne déplace l'élément que s'il n'est pas déjà en première position.
+            if (inventory.indexOf(gold) > 0) {
+                inventory.remove(gold);
+                inventory.add(0, gold);
+            }
+        }
+    }
+    
+    /**
      * Ajoute un sort au livre de sorts
+     * Si le sort est déjà connu, son niveau est augmenté.
      */
     public void addSpell(String spellName, String level) {
-        spells.add(new SpellEntry(spellName, level));
-        logEvent("Nouveau sort appris: " + spellName + " " + level);
+        Optional<SpellEntry> existingSpell = spells.stream()
+            .filter(spell -> spell.name().equalsIgnoreCase(spellName))
+            .findFirst();
+
+        if (existingSpell.isPresent()) {
+            // Améliorer le sort existant
+            SpellEntry oldSpell = existingSpell.get();
+            int currentLevel = StringUtils.fromRoman(oldSpell.level());
+            String newLevel = StringUtils.toRoman(currentLevel + 1);
+            
+            spells.remove(oldSpell);
+            spells.add(new SpellEntry(spellName, newLevel));
+            logEvent("Sort amélioré: " + spellName + " " + newLevel);
+        } else {
+            // Apprendre un nouveau sort
+            spells.add(new SpellEntry(spellName, level));
+            logEvent("Nouveau sort appris: " + spellName + " " + level);
+        }
     }
     
     /**
@@ -360,6 +416,13 @@ public class Game {
         equipment.put(slot, itemName);
         bestEquipment = itemName; // Mise à jour du meilleur équipement
         logEvent("Équipé: " + itemName + " dans " + slot);
+    }
+    
+    /**
+     * Ajoute une quête à la liste.
+     */
+    public void addQuest(String quest) {
+        quests.add(quest);
     }
     
     /**
@@ -430,16 +493,10 @@ public class Game {
     /**
      * Récupérer le meilleur sort du livre de sorts
      */
-    public String getSpellNameWithMaxLevel(List<SpellEntry> spells) { // TO DO changer le type du level vers int avec transformation Roman à la fin
+    public String getSpellNameWithMaxLevel(List<SpellEntry> spells) {
         return spells.stream()
             .filter(spell -> spell.level() != null && !spell.level().isEmpty())
-            .max(Comparator.comparing(spell -> {
-                try {
-                    return Integer.parseInt(spell.level());
-                } catch (NumberFormatException e) {
-                    return Integer.MIN_VALUE; // Traiter comme niveau minimum en cas d'erreur
-                }
-            }))
+            .max(Comparator.comparing(spell -> StringUtils.fromRoman(spell.level())))
             .map(SpellEntry::name)
             .orElse("");
     }
@@ -449,11 +506,28 @@ public class Game {
         return bestSpell;
     }
 
-    public String getBestEquipment() {        
-        // Convertir en liste et récupérer un élément aléatoire
-        List<String> values = new ArrayList<>(equipment.values());
-        String randomValue = values.get(new Random().nextInt(values.size()));
-        return randomValue; 
+    // Helper to extract bonus from equipment name
+    @JsonIgnore
+    private int getEquipmentBonus(String itemName) {
+        if (itemName == null || itemName.isEmpty()) {
+            return Integer.MIN_VALUE;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("^[+-]?\\d+").matcher(itemName);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group());
+            } catch (NumberFormatException e) {
+                return 0; // Default for non-numeric start
+            }
+        }
+        return 0; // No bonus found
+    }
+
+    public String getBestEquipment() {
+        return equipment.values().stream()
+                .filter(Objects::nonNull)
+                .max(Comparator.comparing(this::getEquipmentBonus))
+                .orElse("");
     }
 
     // Getters et setters pour tous les champs (nécessaires pour Jackson)
@@ -469,13 +543,33 @@ public class Game {
     public void setEquipment(Map<String, String> equipment) { this.equipment = equipment; }
     
     public List<InventoryItem> getInventory() { return inventory; }
-    public void setInventory(List<InventoryItem> inventory) { this.inventory = inventory; }
+    public void setInventory(List<InventoryItem> inventory) {
+        this.inventory = inventory;
+        ensureGoldIsFirst(); // Garantit l'ordre après la désérialisation
+    }
     
     public List<SpellEntry> getSpells() { return spells; }
     public void setSpells(List<SpellEntry> spells) { this.spells = spells; }
     
+    // Getter pour la logique interne et l'UI, retourne la liste complète
     public List<String> getQuests() { return quests; }
-    public void setQuests(List<String> Quests) { this.quests = quests; }
+    
+    // Setter utilisé par Jackson lors de la désérialisation (chargement)
+    @JsonSetter("Quests")
+    public void setQuests(List<String> quests) { this.quests = quests != null ? new ArrayList<>(quests) : new ArrayList<>(); }
+    
+    // Getter spécial utilisé par Jackson lors de la sérialisation (sauvegarde)
+    @JsonGetter("Quests")
+    private List<String> getQuestsForSave() {
+        /* Au cas ou ou voudrait limiter le nombre de quetes sauvegardées
+        mais comme c'est lié à l'acte, il ne faut pas faire ça
+        if (quests == null || quests.size() <= 10) {
+            return quests;
+        }
+        return new ArrayList<>(quests.subList(quests.size() - 10, quests.size()));
+        */
+       return quests;
+    }
     
     public List<String> getPlots() { return plots; }
     public void setPlots(List<String> plots) { this.plots = plots; }
@@ -503,6 +597,8 @@ public class Game {
     public ProgressBarState getPlotBar() { return plotBar; }
     public ProgressBarState getQuestBar() { return questBar; }
     public ProgressBarState getEncumbranceBar() { return encumbranceBar; }
+
+    public Deque<String> getTaskQueue() { return taskQueue; }
     
     // Méthode toString pour le debugging
     @Override

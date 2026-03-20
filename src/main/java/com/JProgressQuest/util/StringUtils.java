@@ -219,9 +219,11 @@ public final class StringUtils {
         }
         
         // Conversion standard
-        for (Map.Entry<Integer, String> entry : ROMAN_NUMERALS.entrySet()) {
-            int value = entry.getKey();
-            String numeral = entry.getValue();
+        // On trie les clés par ordre décroissant pour garantir le bon fonctionnement de l'algorithme glouton
+        var sortedKeys = ROMAN_NUMERALS.keySet().stream().sorted(java.util.Comparator.reverseOrder()).toList();
+        
+        for (Integer value : sortedKeys) {
+            String numeral = ROMAN_NUMERALS.get(value);
             
             while (remaining >= value) {
                 result.append(numeral);

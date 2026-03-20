@@ -70,6 +70,9 @@ public class StorageService {
         
         // Chargement initial du roster
         loadRosterCache();
+        
+        // Synchronisation pour récupérer les fichiers manquants du roster
+        syncRosterWithFiles();
     }
     
     /**
@@ -133,7 +136,7 @@ public class StorageService {
             // Mise à jour du roster
             updateRoster(characterName, createGameSummary(game));
             
-            logger.info("Partie sauvegardée: {} ({} bytes)", characterName, jsonData.length);
+            logger.info("Partie sauvegardée: {} ({} bytes) sur {}", characterName, jsonData.length, gameFile.toString());
             
         } finally {
             cacheLock.writeLock().unlock();
@@ -353,6 +356,50 @@ public class StorageService {
         }
     }
     
+    /**
+     * Synchronise le roster avec les fichiers présents sur le disque.
+     * Utile si le fichier roster.json est corrompu ou incomplet.
+     */
+    private void syncRosterWithFiles() {
+        if (!Files.exists(saveDirectory)) return;
+
+        boolean modified = false;
+        try (Stream<Path> files = Files.list(saveDirectory)) {
+            List<Path> gameFiles = files
+                .filter(Files::isRegularFile)
+                .filter(path -> path.toString().endsWith(".json"))
+                .filter(path -> !path.getFileName().equals(rosterFile.getFileName()))
+                .filter(path -> !path.getFileName().toString().contains("_backup_"))
+                .collect(Collectors.toList());
+
+            for (Path path : gameFiles) {
+                try {
+                    // Lecture pour vérifier si le personnage est dans le roster
+                    // On charge le jeu complet pour générer un résumé fiable
+                    byte[] jsonData = Files.readAllBytes(path);
+                    Game game = objectMapper.readValue(jsonData, Game.class);
+                    String name = (String) game.getTrait("Name");
+
+                    if (name != null && !rosterCache.containsKey(name)) {
+                        String summaryJson = objectMapper.writeValueAsString(createGameSummary(game));
+                        rosterCache.put(name, summaryJson);
+                        modified = true;
+                        logger.info("Personnage restauré dans le roster: {}", name);
+                    }
+                } catch (Exception e) {
+                    // Fichier ignoré (probablement pas une sauvegarde valide ou un autre type de json)
+                    logger.debug("Fichier ignoré lors de la synchro roster: {}", path.getFileName());
+                }
+            }
+
+            if (modified) {
+                saveRosterCache();
+            }
+        } catch (IOException e) {
+            logger.error("Erreur lors de la synchronisation du roster", e);
+        }
+    }
+
     /**
      * Charge le roster depuis le fichier
      */

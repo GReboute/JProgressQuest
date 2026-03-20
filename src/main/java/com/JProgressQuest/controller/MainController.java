@@ -12,17 +12,21 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URL;
+import java.util.Optional;
 import java.util.Map;
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -161,12 +165,16 @@ public class MainController implements Initializable {
         equipmentSlotColumn.setCellValueFactory(new PropertyValueFactory<>("slot"));
         equipmentItemColumn.setCellValueFactory(new PropertyValueFactory<>("item"));
         equipmentTable.setItems(equipmentList);
+        // Augmenter la hauteur de la table d'équipement
+        equipmentTable.setPrefHeight(300);
         
         // Configuration de la table d'inventaire  
         inventoryItemColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         inventoryQuantityColumn.setCellValueFactory(new PropertyValueFactory<>("quantity"));
         inventoryTable.setItems(inventoryList);
-        
+        // Réduire la hauteur de la table d'inventaire
+        inventoryTable.setPrefHeight(150);
+
         // Configuration de la table de sorts
         spellNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         spellLevelColumn.setCellValueFactory(new PropertyValueFactory<>("level"));
@@ -330,6 +338,11 @@ public class MainController implements Initializable {
      */
     private void updateProgressBar(ProgressBar bar, Label label, 
                                  Game.ProgressBarState state, String unit) {
+        // Vérification de nullité pour la robustesse, au cas où les éléments FXML seraient manquants.
+        if (bar == null || label == null || state == null) {
+            return;
+        }
+
         if (state.getMax() > 0) {
             double progress = (double) state.getPosition() / state.getMax();
             bar.setProgress(progress);
@@ -488,8 +501,66 @@ public class MainController implements Initializable {
      */
     @FXML
     private void handleSettingsAction() {
-        // TODO: Implémenter le dialogue des paramètres
-        showInfoAlert("Paramètres", "Dialogue des paramètres non encore implémenté.");
+        // Crée un dialogue personnalisé pour les paramètres
+        try {
+            Dialog<Pair<String, GameService.GameSpeed>> dialog = new Dialog<>();
+            dialog.setTitle("Paramètres");
+            dialog.setHeaderText("Réglez les paramètres de l'application.");
+
+            // Ajout des boutons
+            ButtonType applyButtonType = new ButtonType("Appliquer", ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(applyButtonType, ButtonType.CANCEL);
+
+            // Création de la grille pour les contrôles
+            GridPane grid = new GridPane();
+            grid.setHgap(10);
+            grid.setVgap(10);
+            grid.setPadding(new Insets(20, 150, 10, 10));
+
+            // Contrôle du niveau de log
+            ch.qos.logback.classic.LoggerContext loggerContext = (ch.qos.logback.classic.LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
+            ch.qos.logback.classic.Logger appLogger = loggerContext.getLogger("com.JProgressQuest");
+            ch.qos.logback.classic.Level currentLevel = appLogger.getEffectiveLevel();
+            String defaultLogChoice = (currentLevel != null) ? currentLevel.toString() : "WARN";
+            ChoiceBox<String> logLevelBox = new ChoiceBox<>(FXCollections.observableArrayList("TRACE", "DEBUG", "INFO", "WARN", "ERROR"));
+            logLevelBox.setValue(defaultLogChoice);
+
+            // Contrôle de la vitesse du jeu
+            ChoiceBox<GameService.GameSpeed> gameSpeedBox = new ChoiceBox<>(FXCollections.observableArrayList(GameService.GameSpeed.values()));
+            gameSpeedBox.setValue(gameService.getGameSpeed());
+
+            grid.add(new Label("Niveau de Log:"), 0, 0);
+            grid.add(logLevelBox, 1, 0);
+            grid.add(new Label("Vitesse du jeu:"), 0, 1);
+            grid.add(gameSpeedBox, 1, 1);
+
+            dialog.getDialogPane().setContent(grid);
+
+            // Conversion du résultat en une paire de valeurs
+            dialog.setResultConverter(dialogButton -> {
+                if (dialogButton == applyButtonType) {
+                    return new Pair<>(logLevelBox.getValue(), gameSpeedBox.getValue());
+                }
+                return null;
+            });
+
+            Optional<Pair<String, GameService.GameSpeed>> result = dialog.showAndWait();
+
+            result.ifPresent(settings -> {
+                // Appliquer le niveau de log
+                ch.qos.logback.classic.Level newLevel = ch.qos.logback.classic.Level.toLevel(settings.getKey());
+                if (appLogger.getLevel() != newLevel) {
+                    appLogger.setLevel(newLevel);
+                    logger.info("Niveau de log modifié vers: {}", newLevel);
+                }
+
+                // Appliquer la vitesse du jeu
+                gameService.setGameSpeed(settings.getValue());
+            });
+        } catch (ClassCastException e) {
+            logger.warn("Impossible de changer le niveau de log : Logback n'est pas l'implémentation sous-jacente.");
+            showInfoAlert("Paramètres", "Impossible de changer la configuration de log (Logback requis).");
+        }
     }
     
     // === Méthodes utilitaires ===
@@ -549,6 +620,9 @@ public class MainController implements Initializable {
                 }
                 case Constants.GameEvent.ItemFound itemFound -> {
                     gameStatus.set("Objet trouvé: " + itemFound.itemName());
+                }
+                case Constants.GameEvent.EquipmentBought equipmentBought -> {
+                    gameStatus.set(String.format("Achat: %s (%d or) sur %s", equipmentBought.itemName(), equipmentBought.cost(), equipmentBought.slot()));
                 }
             }
         });

@@ -1,0 +1,18 @@
+<configuration>
+    <!-- Appender pour la sortie standard (Console) -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Définition du niveau de log via la propriété système 'log.level' -->
+    <!-- Si la propriété n'est pas définie, utilise 'INFO' par défaut -->
+    <root level="${log.level:-WARN}">
+        <appender-ref ref="STDOUT" />
+    </root>
+    
+    <!-- Configuration spécifique pour votre application -->
+    <!-- Permet d'avoir un niveau différent pour votre code et les bibliothèques -->
+    <logger name="com.JProgressQuest" level="${app.log.level:-WARN}" />
+</configuration>

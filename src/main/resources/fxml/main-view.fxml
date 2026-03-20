@@ -103,12 +103,12 @@
                   <!-- Barre d'expérience -->
                   <VBox spacing="3">
                      <children>
-                        <Label style="-fx-font-weight: bold;" text="Expérience" />
-                        <ProgressBar fx:id="experienceBar" maxWidth="Infinity" progress="0.0" />
-                        <Label fx:id="experienceLabel" style="-fx-font-size: 10px;" text="0/100 XP" />
+                        <Label style="-fx-font-weight: bold;" text="Expérience" styleClass="progress-label-title"/>
+                        <ProgressBar fx:id="experienceBar" maxWidth="Infinity" prefWidth="200.0" progress="0.0" />
+                        <Label fx:id="experienceLabel" styleClass="progress-label-details" style="-fx-font-size: 10px;" text="0/100 XP" />
                      </children>
                   </VBox>
-                  
+                 
                   <!-- Livre de sorts -->
                   <VBox spacing="5" style="-fx-background-color: white; -fx-padding: 10; -fx-border-color: #bdc3c7;" VBox.vgrow="ALWAYS">
                      <children>
@@ -159,9 +159,9 @@
                   <!-- Barre d'encombrement -->
                   <VBox spacing="3">
                      <children>
-                        <Label style="-fx-font-weight: bold;" text="Encombrement" />
-                        <ProgressBar fx:id="encumbranceBar" maxWidth="Infinity" progress="0.0" />
-                        <Label fx:id="encumbranceLabel" style="-fx-font-size: 10px;" text="0/20 cubits" />
+                        <Label style="-fx-font-weight: bold;" text="Encombrement" styleClass="progress-label-title"/>
+                        <ProgressBar fx:id="encumbranceBar" maxWidth="Infinity" prefWidth="200.0" progress="0.0" />
+                        <Label fx:id="encumbranceLabel" styleClass="progress-label-details" style="-fx-font-size: 10px;" text="0/20 cubits" />
                      </children>
                   </VBox>
                </children>
@@ -214,7 +214,7 @@
             <HBox alignment="CENTER_LEFT" spacing="10">
                <children>
                   <ProgressBar fx:id="taskBar" maxWidth="Infinity" progress="0.0" HBox.hgrow="ALWAYS" />
-                  <Label fx:id="taskLabel" style="-fx-text-fill: white; -fx-font-size: 10px;" text="0%" />
+                  <Label fx:id="taskLabel" minWidth="140" alignment="CENTER_RIGHT" style="-fx-text-fill: white; -fx-font-size: 10px;" text="0%" />
                </children>
             </HBox>
             
@@ -224,7 +224,7 @@
                   <Label style="-fx-text-fill: #bdc3c7;" text="Statut:" />
                   <Label fx:id="gameStatusLabel" style="-fx-text-fill: #ecf0f1;" text="Prêt" />
                   <Region HBox.hgrow="ALWAYS" />
-                  <Label style="-fx-text-fill: #bdc3c7; -fx-font-size: 10px;" text="JProgressQuest v1.0 - Java 17 + JavaFX" />
+                  <Label style="-fx-text-fill: #bdc3c7; -fx-font-size: 10px;" text="JProgressQuest v1.0 - Java 23 + JavaFX" />
                </children>
             </HBox>
          </children>
