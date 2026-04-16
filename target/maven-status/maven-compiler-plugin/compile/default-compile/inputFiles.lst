@@ -1,7 +1,9 @@
 /home/guil/Prog/PQ/JProgressQuest/src/main/java/com/JProgressQuest/service/GameService.java
+/home/guil/Prog/PQ/JProgressQuest/src/main/java/com/JProgressQuest/controller/RosterController.java
 /home/guil/Prog/PQ/JProgressQuest/src/main/java/com/JProgressQuest/Launcher.java
 /home/guil/Prog/PQ/JProgressQuest/src/main/java/com/JProgressQuest/service/StorageService.java
 /home/guil/Prog/PQ/JProgressQuest/src/main/java/com/JProgressQuest/service/NameGenerator.java
+/home/guil/Prog/PQ/JProgressQuest/src/main/java/com/JProgressQuest/util/EquipmentPriceCalculator.java
 /home/guil/Prog/PQ/JProgressQuest/src/main/java/com/JProgressQuest/controller/MainController.java
 /home/guil/Prog/PQ/JProgressQuest/src/main/java/com/JProgressQuest/model/Constants.java
 /home/guil/Prog/PQ/JProgressQuest/src/main/java/com/JProgressQuest/model/Game.java

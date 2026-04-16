@@ -7,6 +7,7 @@ import com.JProgressQuest.service.RandomService;
 import com.JProgressQuest.util.StringUtils;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -23,40 +24,51 @@ public class Game {
     
     // Informations de base du personnage
     @JsonProperty("Traits")
+    @JsonAlias("traits")
     private Map<String, Object> traits = new HashMap<>();
     
     @JsonProperty("Stats") 
+    @JsonAlias("stats")
     private Map<String, Integer> stats = new HashMap<>();
     
     @JsonProperty("Equips")
+    @JsonAlias({"equips", "Equipment"})
     private Map<String, String> equipment = new HashMap<>();
     
     @JsonProperty("Inventory")
+    @JsonAlias("inventory")
     private List<InventoryItem> inventory = new ArrayList<>();
     
     @JsonProperty("Spells")
+    @JsonAlias("spells")
     private List<SpellEntry> spells = new ArrayList<>();
     
     // La sérialisation est gérée par un getter/setter personnalisé
     private List<String> quests = new ArrayList<>();
     
     @JsonProperty("Plots")
+    @JsonAlias("plots")
     private List<String> plots = new ArrayList<>();
     
     // Barres de progression
     @JsonProperty("ExpBar")
+    @JsonAlias({"expBar", "expbar"})
     private ProgressBarState expBar = new ProgressBarState();
     
     @JsonProperty("PlotBar")
+    @JsonAlias({"plotBar", "plotbar"})
     private ProgressBarState plotBar = new ProgressBarState();
     
     @JsonProperty("QuestBar") 
+    @JsonAlias({"questBar", "questbar"})
     private ProgressBarState questBar = new ProgressBarState();
     
     @JsonProperty("TaskBar")
+    @JsonAlias({"taskBar", "taskbar"})
     private ProgressBarState taskBar = new ProgressBarState();
     
     @JsonProperty("EncumBar")
+    @JsonAlias({"encumBar", "encumbar"})
     private ProgressBarState encumbranceBar = new ProgressBarState();
     
     // État du jeu
@@ -186,6 +198,45 @@ public class Game {
     }
 
     /**
+     * Recalcule et synchronise l'état des barres après le chargement.
+     * Utilise le pourcentage si la position est manquante ou invalide.
+     */
+    public void reconcileStatus() {
+        // Récupération sécurisée du niveau
+        Object levelObj = getTrait("Level");
+        int level = (levelObj instanceof Integer) ? (Integer) levelObj : 1;
+        
+        // On s'assure que les max sont cohérents avec les règles du jeu
+        // ExpBar: devrait être level * 1000 (selon la formule du GameService)
+        if (expBar.getMax() <= 100) {
+            expBar.setMax(level * 1000);
+        }
+        
+        // PlotBar: 3600 par défaut (augmente avec l'acte)
+        if (plotBar.getMax() <= 100) {
+            plotBar.setMax(3600 * (1 + 5 * currentAct));
+        }
+
+        // Synchronisation des positions à partir des pourcentages chargés
+        syncBar(expBar);
+        syncBar(plotBar);
+        syncBar(questBar);
+        syncBar(taskBar);
+        syncBar(encumbranceBar);
+    }
+
+    private void syncBar(ProgressBarState bar) {
+        if (bar != null && bar.getMax() > 0 && bar.getPercent() > 0) {
+            int calculatedPos = (bar.getPercent() * bar.getMax()) / 100;
+            // On synchronise si la position actuelle est 0 ou 100 (valeurs par défaut suspectes)
+            // ou si l'écart est significatif par rapport au pourcentage (erreur de conversion)
+            if ((bar.getPosition() == 0 || bar.getPosition() == 100) && bar.getPosition() != calculatedPos) {
+                bar.setPosition(calculatedPos);
+            }
+        }
+    }
+
+    /**
      * Modifie un trait
      */
     public void setTime() {
@@ -227,14 +278,18 @@ public class Game {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ProgressBarState {
         @JsonProperty("position")
+        @JsonAlias({"Position", "pos", "Pos"})
         private int position = 0;
         
         @JsonProperty("max")
+        @JsonAlias({"Max", "m"})
         private int max = 100;
         
         @JsonProperty("percent")
         private int percent = 0;
         
+        public void setPercent(int percent) { this.percent = percent; }
+
         @JsonProperty("remaining")
         private int remaining = 100;
         
@@ -419,6 +474,23 @@ public class Game {
     }
     
     /**
+     * Purge le journal des événements pour ne garder que les maxEntries derniers.
+     * @param maxEntries Le nombre maximum d'entrées à conserver.
+     */
+    public void pruneLog(int maxEntries) {
+        if (eventLog == null || eventLog.size() <= maxEntries) return;
+
+        // Tri des clés (timestamps) pour identifier les plus anciennes
+        List<Long> keys = new ArrayList<>(eventLog.keySet());
+        Collections.sort(keys);
+
+        int toRemove = keys.size() - maxEntries;
+        for (int i = 0; i < toRemove; i++) {
+            eventLog.remove(keys.get(i));
+        }
+    }
+
+    /**
      * Ajoute une quête à la liste.
      */
     public void addQuest(String quest) {
@@ -506,6 +578,22 @@ public class Game {
         return bestSpell;
     }
 
+    /**
+     * Récupérer un sort en particulier du livre de sorts
+     */
+    public int getSpellLevelInList(List<SpellEntry> spells, String spellName) {
+        String level =  spells.stream()
+            .filter(spell -> spellName.equals( spell.name() ) )
+            .map(SpellEntry::level)
+            .findFirst()
+            .orElse("");
+        return StringUtils.fromRoman(level);
+    }
+
+    public int getSpellLevel(String spell) {
+        return getSpellLevelInList(spells, spell);
+    }    
+
     // Helper to extract bonus from equipment name
     @JsonIgnore
     private int getEquipmentBonus(String itemName) {
@@ -556,6 +644,7 @@ public class Game {
     
     // Setter utilisé par Jackson lors de la désérialisation (chargement)
     @JsonSetter("Quests")
+    @JsonAlias("quests")
     public void setQuests(List<String> quests) { this.quests = quests != null ? new ArrayList<>(quests) : new ArrayList<>(); }
     
     // Getter spécial utilisé par Jackson lors de la sérialisation (sauvegarde)

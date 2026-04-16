@@ -1,6 +1,7 @@
 com/JProgressQuest/service/RandomService.class
 com/JProgressQuest/model/Constants$Time.class
 com/JProgressQuest/model/Constants$GameEvent$ItemFound.class
+com/JProgressQuest/controller/RosterController.class
 com/JProgressQuest/service/StorageService$StorageException.class
 com/JProgressQuest/model/Character.class
 com/JProgressQuest/controller/MainController$2.class
@@ -10,8 +11,10 @@ com/JProgressQuest/Launcher.class
 com/JProgressQuest/controller/MainController.class
 com/JProgressQuest/controller/MainController$InventoryEntry.class
 com/JProgressQuest/util/RandomGenerator.class
+com/JProgressQuest/util/EquipmentPriceCalculator.class
 com/JProgressQuest/model/Character$ProgressBar.class
 com/JProgressQuest/service/RandomService$Mash.class
+com/JProgressQuest/controller/RosterController$1.class
 com/JProgressQuest/service/NameGenerator.class
 com/JProgressQuest/JProgressQuestApplication.class
 com/JProgressQuest/JProgressQuestApplication$AppConfig.class

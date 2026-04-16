@@ -224,9 +224,15 @@ public class GameService {
         gameRunning = false;
         logger.info("Arrêt du jeu");
         
-        // Sauvegarde automatique
+        // Sauvegarde automatique synchrone pour garantir l'écriture avant la fermeture de l'application
         if (currentGame != null) {
-            saveGameAsync(currentGame);
+            try {
+                currentGame.saveRandomState();
+                storageService.saveGame(currentGame);
+                logger.info("Jeu sauvegardé automatiquement: {}", currentGame.getTrait("Name"));
+            } catch (Exception e) {
+                logger.error("Erreur lors de la sauvegarde automatique à l'arrêt", e);
+            }
         }
     }
     
@@ -265,19 +271,20 @@ public class GameService {
     private void completeCurrentTask() {
         String taskType = currentGame.getTaskType();
         
-        logger.info("Fin de tâche: '{}' [{}]", currentGame.getCurrentTask(), taskType);
+        logger.debug("Fin de tâche: '{}' [{}]", currentGame.getCurrentTask(), taskType);
         
         try {
             boolean wasKillTask = "kill".equals(taskType);
-            int progressAmount = currentGame.getTaskBar().getMax() / 1000;
+            // Calcul unifié du gain de progression (minimum 1)
+            int progressAmount = Math.max(1, currentGame.getTaskBar().getMax() / 1000);
 
             // Actions spécifiques à la fin de tâche
             switch (taskType) {
-                case "kill" -> completeKillTask();
+                case "kill" -> completeKillTask(progressAmount);
                 case "buying" -> completeBuyingTask();
                 case "selling", "market" -> completeSellingTask();
                 case "heading" -> completeHeadingTask();
-                default -> logger.debug("Pas d'action spécifique pour le type de tâche: {}", taskType);
+                default -> logger.warn("Pas d'action spécifique pour le type de tâche: {}", taskType);
             }
 
             // Progression de l'intrigue (selon la logique JS: si kill task ou act 0)
@@ -309,9 +316,8 @@ public class GameService {
     /**
      * Termine une tâche de combat
      */
-    private void completeKillTask() {
+    private void completeKillTask(int expGain) {
         // Gain d'expérience
-        int expGain = currentGame.getTaskBar().getMax() / 1000;
         currentGame.getExpBar().increment(expGain);
         
         // Vérification de montée de niveau
@@ -325,12 +331,6 @@ public class GameService {
             if (currentGame.getQuestBar().isDone()) {
                 completeQuest();
             }
-        }
-        
-        // Progression de l'intrigue
-        currentGame.getPlotBar().increment(expGain);
-        if (currentGame.getPlotBar().isDone()) {
-            completeAct();
         }
         
         // Chance de trouver un objet
@@ -368,11 +368,21 @@ public class GameService {
 
         if (itemToSellOpt.isPresent()) {
             var itemToSell = itemToSellOpt.get();
-            int sellPrice = itemToSell.quantity() * (Integer) currentGame.getTrait("Level");
+            // Calcul du prix de vente - initialement très faible
+            //int sellPrice  = itemToSell.quantity() * (Integer) currentGame.getTrait("Level");
+            int gamelevel = (Integer) currentGame.getTrait("Level");
+            int sellPrice  = 0; // pour éviter la double déclaration
+            if (gamelevel < 10) {
+                sellPrice  += itemToSell.quantity() * gamelevel; // formule par défaut
+            } else {
+            // tentative d'obtenir un prix de plus en plus élevé - de 125 (lvl=10) à 10000 (lvl=100)
+                sellPrice  += itemToSell.quantity() * Math.toIntExact(Math.round(gamelevel*Math.pow(10.0, (1+gamelevel/100.0))));
+            }
+            
 
             // Bonus si l'objet a un préfixe spécial
             if (itemToSell.name().contains(" of ")) {
-                sellPrice *= (1 + randomService.random(10)) * (1 + randomService.random((Integer) currentGame.getTrait("Level")));
+                sellPrice *= (1 + randomService.random(10)) * (1 + randomService.random(gamelevel));
             }
 
             // Utilisation de la méthode encapsulée pour une suppression fiable
@@ -446,7 +456,7 @@ public class GameService {
                 } else {
                     // On est au marché, on vend l'objet.
                     var itemToSell = itemToSellOpt.get();
-                    logger.info("Au marché, vente de: {}.", itemToSell.name());
+                    logger.debug("Au marché, vente de: {}.", itemToSell.name());
                     createTask("Selling " + itemToSell.name(), 1000 + randomService.random(1000));
                     currentGame.setTaskType("selling");
                 }
@@ -460,7 +470,7 @@ public class GameService {
                 .orElse(0);
         int equipPrice = calculateEquipmentPrice();
         if (goldAmount > equipPrice) {
-            logger.info("Assez d'or ({}) pour équipement ({}) -> Achat", goldAmount, equipPrice);
+            logger.debug("Assez d'or ({}) pour équipement ({}) -> Achat", goldAmount, equipPrice);
             createTask("Negotiating purchase of better equipment", 5000);
             currentGame.setTaskType("buying");
             return;
@@ -468,14 +478,14 @@ public class GameService {
 
         // Priorité 3: Si rien d'autre à faire, on part à l'aventure.
         if (!"kill".equals(currentGame.getTaskType()) && !"heading".equals(currentGame.getTaskType())) {
-            logger.info("Déplacement vers le terrain de chasse");
+            logger.debug("Déplacement vers le terrain de chasse");
             createTask("Heading to the killing fields", 4000);
             currentGame.setTaskType("heading");
             return;
         }
 
         // On est sur le terrain de chasse, on génère un combat.
-        logger.info("Génération d'un combat");
+        logger.debug("Génération d'un combat");
         generateCombatTask();
     }
     
@@ -587,6 +597,8 @@ public class GameService {
         
         currentGame.addToStat("HP Max", conBonus + 1 + randomService.random(4));
         currentGame.addToStat("MP Max", intBonus + 1 + randomService.random(4));
+        logger.debug("HP raised to {}", currentGame.getStat("HP Max"));
+        logger.debug("MP raised to {}", currentGame.getStat("MP Max"));
         
         // Amélioration de statistiques aléatoires
         improveTwoRandomStats();
@@ -600,7 +612,7 @@ public class GameService {
         // Événement de montée de niveau
         fireGameEvent(new Constants.GameEvent.LevelUp(newLevel));
         
-        logger.info("Montée de niveau! Niveau {} atteint", newLevel);
+        logger.warn("Montée de niveau! Niveau {} atteint", newLevel); // pas vraiment un warning, mais information importante 
     }
     
     /**
@@ -612,10 +624,12 @@ public class GameService {
                 // Stat aléatoire
                 String stat = randomService.pick(Constants.STATS);
                 currentGame.addToStat(stat, 1);
+                logger.debug("Stat améliorée {} à {}", stat, currentGame.getStat(stat));
             } else {
                 // Favorise la meilleure stat pour créer une spécialisation
                 String bestStat = findBestPrimaryStat();
                 currentGame.addToStat(bestStat, 1);
+                logger.debug("Stat améliorée {} à {}", bestStat, currentGame.getStat(bestStat));
             }
         }
     }
@@ -643,6 +657,7 @@ public class GameService {
             if (maxSpellIndex > 0) {
                 String spell = randomService.pickLow(Constants.SPELLS.subList(0, maxSpellIndex));
                 currentGame.addSpell(spell, "I"); // Niveau romain I
+                logger.debug("Sort appris/améliorée {} à {}", spell, currentGame.getSpellLevel(spell));
             }
         }
     }
@@ -851,7 +866,13 @@ public class GameService {
      */
     private int calculateEquipmentPrice() {
         int level = (Integer) currentGame.getTrait("Level");
-        return 5 * level * level + 10 * level + 20;
+        // Ancienne version du calcul - n'est pas assez cher à haut niveau
+        // return 5 * level * level + 10 * level + 20;
+        return 5 * (level * level) + ((int) Math.ceil(Math.pow(1.21, level))) + 20;
+        /* avec cette formule, le point de bascule se fait au niveau 30
+            moins cher en dessous, plus cher au delà
+            là, le vendeur est un vrai voleur pour les hauts niveaux
+        */
     }
     
     /**

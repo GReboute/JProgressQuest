@@ -16,6 +16,7 @@
             <Button fx:id="newGameButton" mnemonicParsing="false" onAction="#handleNewGameAction" text="Nouveau Jeu" />
             <Button fx:id="loadButton" mnemonicParsing="false" onAction="#handleLoadAction" text="Charger" />
             <Button fx:id="saveButton" mnemonicParsing="false" onAction="#handleSaveAction" text="Sauver" />
+            <Button fx:id="rosterButton" mnemonicParsing="false" onAction="#handleBackToRosterAction" text="Roster" />
             <Separator orientation="VERTICAL" />
             <Button fx:id="playPauseButton" mnemonicParsing="false" onAction="#handlePlayPauseAction" 
                     style="-fx-background-color: #27ae60; -fx-text-fill: white;" text="Play" />
@@ -133,7 +134,7 @@
                      <children>
                         <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Équipement" />
                         <Separator />
-                        <TableView fx:id="equipmentTable" prefHeight="200">
+                        <TableView fx:id="equipmentTable" prefHeight="180">
                            <columns>
                               <TableColumn fx:id="equipmentSlotColumn" prefWidth="100" text="Emplacement" />
                               <TableColumn fx:id="equipmentItemColumn" prefWidth="180" text="Objet" />

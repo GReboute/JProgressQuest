@@ -18,7 +18,8 @@
         <maven.compiler.target>23</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
-        <!-- JavaFX 17 - Version compatible avec Java 23 -->
+        <!-- JavaFX 17 - Version compatible avec Java 23
+             Passé en JFX24 par la suite -->
         <javafx.version>24.0.1</javafx.version>
         <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
         
@@ -95,9 +96,11 @@
                 <configuration>
                     <source>23</source>
                     <target>23</target>
-                    <!-- Enable preview features si nécessaire -->
+                    <!-- Enable preview features si nécessaire (JDK23) -->
                     <compilerArgs>
                         <arg>--enable-preview</arg>
+                        <arg>-Xlint:deprecation</arg>
+                        <arg>-Xlint:unchecked</arg>                        
                     </compilerArgs>
                 </configuration>
             </plugin>

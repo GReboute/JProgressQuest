@@ -2,13 +2,16 @@ package com.JProgressQuest.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.JProgressQuest.model.Game;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Instant;
 import java.util.*;
@@ -44,21 +47,25 @@ public class StorageService {
     // Configuration
     private final int maxBackups;
     private final boolean enableCache;
+    private final int maxLogEntries;
     
     /**
      * Constructeur avec répertoire de sauvegarde personnalisé
      */
-    public StorageService(Path saveDirectory, int maxBackups, boolean enableCache) {
+    public StorageService(Path saveDirectory, int maxBackups, boolean enableCache, int maxLogEntries) {
         this.saveDirectory = Objects.requireNonNull(saveDirectory);
         this.rosterFile = saveDirectory.resolve("roster.json");
         this.maxBackups = maxBackups;
         this.enableCache = enableCache;
+        this.maxLogEntries = maxLogEntries;
         
         // Configuration de Jackson avec les modules modernes
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.registerModule(new JavaTimeModule()); // Support des types Java 8+ Time
-        this.objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        this.objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true); // JSON formaté
+        this.objectMapper = JsonMapper.builder()
+                .addModule(new JavaTimeModule()) // Support des types Java 8+ Time
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+                .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+                .configure(SerializationFeature.INDENT_OUTPUT, true) // JSON formaté
+                .build();
         
         // Création du répertoire si nécessaire
         try {
@@ -79,14 +86,14 @@ public class StorageService {
      * Constructeur par défaut avec répertoire dans le dossier utilisateur
      */
     public StorageService() {
-        this(getDefaultSaveDirectory(), 5, true);
+        this(getDefaultSaveDirectory(), 5, true, 10000);
     }
     
     /**
      * Constructeur avec paramètres personnalisés
      */
     public StorageService(int maxBackups, boolean enableCache) {
-        this(getDefaultSaveDirectory(), maxBackups, enableCache);
+        this(getDefaultSaveDirectory(), maxBackups, enableCache, 10000);
     }
     
     /**
@@ -121,6 +128,9 @@ public class StorageService {
         // Sérialisation et sauvegarde
         cacheLock.writeLock().lock();
         try {
+            // Purge le journal des événements avant la sauvegarde pour limiter la taille du fichier
+            game.pruneLog(maxLogEntries);
+            
             // Mise à jour des métadonnées
             game.setTime();
             
@@ -174,6 +184,9 @@ public class StorageService {
             byte[] jsonData = Files.readAllBytes(gameFile);
             Game game = objectMapper.readValue(jsonData, Game.class);
             
+            // Réconciliation de l'état des barres après chargement
+            game.reconcileStatus();
+            
             // Mise à jour du cache
             if (enableCache) {
                 gameCache.put(characterName, game);
@@ -186,7 +199,37 @@ public class StorageService {
             cacheLock.writeLock().unlock();
         }
     }
-    
+
+    /**
+     * Importe un fichier au format .pqw (Base64 du JSON) et l'intègre au roster.
+     */
+    public Game importPqwFile(Path pqwPath) throws IOException {
+        Objects.requireNonNull(pqwPath, "Le chemin du fichier .pqw ne peut pas être null");
+        
+        byte[] bytes = Files.readAllBytes(pqwPath);
+        String content = new String(bytes, StandardCharsets.UTF_8).trim();
+        
+        byte[] jsonData;
+        try {
+            // Tente de décoder le Base64 (format standard des fichiers .pqw)
+            jsonData = Base64.getDecoder().decode(content);
+        } catch (IllegalArgumentException e) {
+            // Si ce n'est pas du base64, on tente de lire comme du JSON brut
+            jsonData = bytes;
+        }
+
+        Game importedGame = objectMapper.readValue(jsonData, Game.class);
+        
+        // Initialise les barres de progression et l'état interne
+        importedGame.reconcileStatus();
+        
+        // Sauvegarde immédiate pour intégration automatique au roster et au cache
+        saveGame(importedGame);
+        
+        logger.info("Personnage importé avec succès du format .pqw: {}", importedGame.getTrait("Name"));
+        return importedGame;
+    }
+
     /**
      * Obtient la liste de tous les personnages sauvegardés
      */
@@ -306,6 +349,9 @@ public class StorageService {
         byte[] jsonData = Files.readAllBytes(importPath);
         Game game = objectMapper.readValue(jsonData, Game.class);
         
+        // Réconciliation après import
+        game.reconcileStatus();
+        
         logger.info("Partie importée depuis: {}", importPath);
         return game;
     }
@@ -378,6 +424,10 @@ public class StorageService {
                     // On charge le jeu complet pour générer un résumé fiable
                     byte[] jsonData = Files.readAllBytes(path);
                     Game game = objectMapper.readValue(jsonData, Game.class);
+                    
+                    // Assure la cohérence des données pour le résumé du roster
+                    game.reconcileStatus();
+                    
                     String name = (String) game.getTrait("Name");
 
                     if (name != null && !rosterCache.containsKey(name)) {
@@ -388,7 +438,7 @@ public class StorageService {
                     }
                 } catch (Exception e) {
                     // Fichier ignoré (probablement pas une sauvegarde valide ou un autre type de json)
-                    logger.debug("Fichier ignoré lors de la synchro roster: {}", path.getFileName());
+                    logger.info("Fichier ignoré lors de la synchro roster: {}", path.getFileName());
                 }
             }
 
@@ -433,7 +483,7 @@ public class StorageService {
         byte[] jsonData = objectMapper.writeValueAsBytes(rosterCache);
         Files.write(rosterFile, jsonData, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
         
-        logger.debug("Roster sauvegardé avec {} entrées", rosterCache.size());
+        logger.info("Roster sauvegardé avec {} entrées", rosterCache.size());
     }
     
     /**
@@ -528,7 +578,8 @@ public class StorageService {
         int maxBackups,
         boolean enableCache,
         boolean enableCompression,
-        int cacheMaxSize
+        int cacheMaxSize,
+        int maxLogEntries
     ) {
         public static StorageConfig defaultConfig() {
             return new StorageConfig(
@@ -536,7 +587,8 @@ public class StorageService {
                 5,
                 true,
                 false,
-                100
+                100,
+                10000
             );
         }
         
@@ -546,7 +598,8 @@ public class StorageService {
                 10,
                 true,
                 true,
-                500
+                500,
+                5000
             );
         }
     }
@@ -615,7 +668,7 @@ public class StorageService {
      * Optimise le stockage (compression, nettoyage, etc.)
      */
     public void optimize() throws IOException {
-        logger.info("Début de l'optimisation du stockage");
+        logger.debug("Début de l'optimisation du stockage");
         
         cacheLock.writeLock().lock();
         try {
@@ -638,7 +691,7 @@ public class StorageService {
             cacheLock.writeLock().unlock();
         }
         
-        logger.info("Optimisation terminée");
+        logger.debug("Optimisation terminée");
     }
     
     /**

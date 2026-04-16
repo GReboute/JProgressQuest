@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.JProgressQuest.controller.RosterController"
+      spacing="15" alignment="CENTER" prefWidth="600" prefHeight="500"
+      style="-fx-background-color: #2b2b2b; -fx-padding: 30;">
+
+    <Label text="JProgressQuest - Roster" 
+           style="-fx-font-size: 28; -fx-text-fill: #e0e0e0; -fx-font-weight: bold;"/>
+    
+    <Label text="Choisissez votre héros pour continuer l'aventure" 
+           style="-fx-text-fill: #b0b0b0;"/>
+
+    <ListView fx:id="characterListView" VBox.vgrow="ALWAYS" 
+              style="-fx-background-color: #3c3f41; -fx-control-inner-background: #3c3f41; -fx-text-fill: white;"/>
+
+    <HBox spacing="15" alignment="CENTER">
+        <Button fx:id="playButton" text="Jouer" onAction="#handlePlay" prefWidth="100" 
+                style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+        <Button text="Nouveau" onAction="#handleNewGame" prefWidth="100"/>
+        <Button text="Importer JSON" onAction="#handleImport" prefWidth="120"/>
+        <Button text="Importer PQW" onAction="#handleImportPqw" prefWidth="120"/>
+        <Button fx:id="deleteButton" text="Supprimer" onAction="#handleDelete" prefWidth="100" 
+                style="-fx-text-fill: #ff6b6b;"/>
+    </HBox>
+</VBox>

@@ -15,16 +15,21 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
+import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import javafx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.Optional;
 import java.util.Map;
@@ -102,6 +107,7 @@ public class MainController implements Initializable {
     @FXML private Button saveButton;
     @FXML private Button loadButton;
     @FXML private Button newGameButton;
+    @FXML private Button rosterButton;
     @FXML private Button settingsButton;
     
     // === FXML Injections - Status ===
@@ -218,6 +224,7 @@ public class MainController implements Initializable {
         saveButton.disableProperty().bind(gameRunning.not().or(loading));
         loadButton.disableProperty().bind(gameRunning.or(loading));
         newGameButton.disableProperty().bind(loading);
+        rosterButton.disableProperty().bind(loading);
         
         logger.debug("Bindings configurés");
     }
@@ -278,6 +285,15 @@ public class MainController implements Initializable {
             updateProgressBars();
             updateCollections();
         });
+    }
+
+    /**
+     * Définit le jeu en cours et met à jour l'interface.
+     */
+    public void setCurrentGame(Game game) {
+        this.currentGame = game;
+        updateUI();
+        gameStatus.set("Prêt pour : " + game.getTrait("Name"));
     }
     
     /**
@@ -495,7 +511,32 @@ public class MainController implements Initializable {
         // Affichage du dialogue de création de personnage
         showCharacterCreationDialog().ifPresent(this::startNewGame);
     }
-    
+
+    /**
+     * Gère l'importation d'un fichier .pqw externe
+     */
+    @FXML
+    private void handleImportPqwAction() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Importer un personnage Progress Quest (.pqw)");
+        fileChooser.getExtensionFilters().add(
+            new FileChooser.ExtensionFilter("Fichiers Progress Quest", "*.pqw")
+        );
+
+        File selectedFile = fileChooser.showOpenDialog(stage);
+        if (selectedFile != null) {
+            try {
+                Game imported = storageService.importPqwFile(selectedFile.toPath());
+                setCurrentGame(imported);
+                showInfoAlert("Importation réussie", 
+                    "Le personnage '" + imported.getTrait("Name") + "' a été importé et ajouté au roster.");
+            } catch (Exception e) {
+                logger.error("Erreur lors de l'importation du fichier .pqw", e);
+                showErrorAlert("Erreur d'importation", "Impossible de lire ou de convertir le fichier .pqw.", e);
+            }
+        }
+    }
+
     /**
      * Gère l'affichage des paramètres
      */
@@ -560,6 +601,39 @@ public class MainController implements Initializable {
         } catch (ClassCastException e) {
             logger.warn("Impossible de changer le niveau de log : Logback n'est pas l'implémentation sous-jacente.");
             showInfoAlert("Paramètres", "Impossible de changer la configuration de log (Logback requis).");
+        }
+    }
+    
+    /**
+     * Gère le retour au roster (menu principal)
+     */
+    @FXML
+    private void handleBackToRosterAction() {
+        // Arrêt propre du jeu actuel
+        if (gameService.isGameRunning()) {
+            gameService.stopGame();
+            gameRunning.set(false);
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/roster-view.fxml"));
+            loader.setControllerFactory(type -> {
+                if (type == RosterController.class) return new RosterController(gameService, storageService);
+                return null;
+            });
+            
+            Scene scene = new Scene(loader.load());
+            RosterController controller = loader.getController();
+            controller.setStage(stage);
+            
+            URL css = getClass().getResource("/css/application.css");
+            if (css != null) scene.getStylesheets().add(css.toExternalForm());
+            
+            stage.setScene(scene);
+            logger.info("Retour au menu principal (Roster)");
+        } catch (IOException e) {
+            logger.error("Erreur lors du retour au roster", e);
+            showErrorAlert("Erreur", "Impossible de revenir au menu principal.", e);
         }
     }
     

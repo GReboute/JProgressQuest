@@ -1,6 +1,7 @@
 package com.JProgressQuest;
 
 import com.JProgressQuest.controller.MainController;
+import com.JProgressQuest.controller.RosterController;
 import com.JProgressQuest.service.GameService;
 import com.JProgressQuest.service.StorageService;
 import com.JProgressQuest.service.NameGenerator;
@@ -29,7 +30,7 @@ public class JProgressQuestApplication extends Application {
     
     // Constantes de l'application
     private static final String APP_TITLE = "JProgressQuest";
-    private static final String APP_VERSION = "1.0.0";
+    private static final String APP_VERSION = "1.0.1";
     private static final double MIN_WIDTH = 900;
     private static final double MIN_HEIGHT = 700;
     
@@ -66,7 +67,7 @@ public class JProgressQuestApplication extends Application {
     public void init() throws Exception {
         super.init();
         
-        logger.info("Initialisation des services...");
+        logger.debug("Initialisation des services...");
         
         try {
             // Initialisation des services
@@ -76,7 +77,7 @@ public class JProgressQuestApplication extends Application {
             NameGenerator nameGenerator = new NameGenerator(randomService);
             gameService = new GameService(randomService, nameGenerator, storageService);
             
-            logger.info("Services initialisés avec succès");
+            logger.debug("Services initialisés avec succès");
             
         } catch (Exception e) {
             logger.error("Erreur lors de l'initialisation des services", e);
@@ -95,8 +96,8 @@ public class JProgressQuestApplication extends Application {
             // Configuration de la fenêtre principale
             setupPrimaryStage(primaryStage);
             
-            // Chargement de l'interface principale
-            loadMainInterface(primaryStage);
+            // Chargement du Roster (Menu Principal) au démarrage
+            loadRosterInterface(primaryStage);
             
             // Gestion de la fermeture de l'application
             setupShutdownHandler(primaryStage);
@@ -104,7 +105,7 @@ public class JProgressQuestApplication extends Application {
             // Affichage de la fenêtre
             primaryStage.show();
             
-            logger.info("Interface utilisateur démarrée");
+            logger.debug("Interface utilisateur démarrée");
             
         } catch (Exception e) {
             logger.error("Erreur lors du démarrage de l'interface", e);
@@ -135,6 +136,32 @@ public class JProgressQuestApplication extends Application {
         
         // Configuration pour une meilleure apparence sur les écrans haute résolution
         stage.getScene(); // Peut être null à ce stade
+    }
+    
+    /**
+     * Chargement de l'interface du Roster
+     */
+    private void loadRosterInterface(Stage stage) throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader();
+        fxmlLoader.setLocation(getClass().getResource("/fxml/roster-view.fxml"));
+        
+        fxmlLoader.setControllerFactory(controllerClass -> {
+            if (controllerClass == RosterController.class) {
+                return new RosterController(gameService, storageService);
+            }
+            return null;
+        });
+        
+        javafx.scene.Parent root = fxmlLoader.load();
+        Scene scene = new Scene(root, MIN_WIDTH, MIN_HEIGHT);
+        
+        // Chargement du CSS
+        loadStylesheets(scene);
+        
+        stage.setScene(scene);
+        
+        RosterController controller = fxmlLoader.getController();
+        controller.setStage(stage);
     }
     
     /**
@@ -218,7 +245,7 @@ public class JProgressQuestApplication extends Application {
     private void setupShutdownHandler(Stage stage) {
         // Gestionnaire pour la fermeture de la fenêtre
         stage.setOnCloseRequest(event -> {
-            logger.info("Demande de fermeture de l'application");
+            logger.debug("Demande de fermeture de l'application");
             
             // Sauvegarde automatique si un jeu est en cours
             if (gameService != null && gameService.isGameRunning()) {
@@ -236,7 +263,7 @@ public class JProgressQuestApplication extends Application {
         
         // Gestionnaire pour l'arrêt de la JVM
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            logger.info("Hook d'arrêt exécuté");
+            logger.debug("Hook d'arrêt exécuté");
             cleanup();
         }));
     }
@@ -245,7 +272,7 @@ public class JProgressQuestApplication extends Application {
      * Nettoyage des ressources de l'application
      */
     private void cleanup() {
-        logger.info("Nettoyage des ressources...");
+        logger.debug("Nettoyage des ressources...");
         
         try {
             // Arrêt du service de jeu
@@ -258,7 +285,7 @@ public class JProgressQuestApplication extends Application {
                 storageService.close();
             }
             
-            logger.info("Ressources nettoyées");
+            logger.debug("Ressources nettoyées");
             
         } catch (Exception e) {
             logger.error("Erreur lors du nettoyage", e);
