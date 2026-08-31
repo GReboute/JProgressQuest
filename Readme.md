@@ -1,8 +1,11 @@
 # JProgressQuest
 
 Une conversion Java 23 + JavaFX du célèbre jeu satirique "Progress Quest" originalement développé en Delphi, puis porté en JavaScript.
+
 Delphi :     https://bitbucket.org/grumdrig/pq/src/pq6/ 
+
 JavaScript : http://progressquest.com/play/
+
 Je suis parti de la version JavaScript.
 
 ![Java](https://img.shields.io/badge/Java-23-orange?style=flat-square&logo=java)
