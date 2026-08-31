@@ -5,7 +5,7 @@ Delphi :     https://bitbucket.org/grumdrig/pq/src/pq6/
 JavaScript : http://progressquest.com/play/
 Je suis parti de la version JavaScript.
 
-![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square&logo=java)
+![Java](https://img.shields.io/badge/Java-23-orange?style=flat-square&logo=java)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17-blue?style=flat-square)
 ![Maven](https://img.shields.io/badge/Maven-3.8+-green?style=flat-square&logo=apache-maven)
 ![License](https://img.shields.io/badge/License-NCSA-yellow?style=flat-square)
